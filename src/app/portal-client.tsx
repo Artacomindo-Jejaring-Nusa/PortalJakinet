@@ -71,14 +71,24 @@ export default function PortalDashboardClient({ customerData }: Props) {
     today.setHours(0, 0, 0, 0);
 
     const overdueInvoice = customerData.invoices.find((invoice) => {
-      if (invoice.status_invoice === 'Lunas') return false;
+      const status = invoice.status_invoice?.toLowerCase() || '';
+      if (status === 'lunas') return false;
+      
+      // If API explicitly says it's expired or overdue, it's suspended
+      if (status === 'kadaluarsa' || status === 'tunggakan' || status === 'macet') return true;
+      
       const dueDate = new Date(invoice.tgl_jatuh_tempo);
       dueDate.setHours(0, 0, 0, 0);
       return dueDate < today;
     });
 
     if (overdueInvoice) return 'Suspended';
-    return customerData.langganan?.status || 'Aktif';
+    
+    const status = customerData.langganan?.status || 'Aktif';
+    if (status.toLowerCase().includes('suspend')) return 'Suspended';
+    if (status.toLowerCase().includes('non-aktif') || status.toLowerCase() === 'non aktif') return 'Non-Aktif';
+    
+    return status;
   };
 
   const actualSubscriptionStatus = calculateSubscriptionStatus();

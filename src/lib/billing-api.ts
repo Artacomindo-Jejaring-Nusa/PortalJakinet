@@ -48,13 +48,14 @@ export interface Invoice {
   pelanggan_id: number;
   invoice_number: string;
   total_harga: number;
-  status_invoice: 'Lunas' | 'Belum Lunas' | 'Jatuh Tempo';
+  status_invoice: 'Lunas' | 'Belum Lunas' | 'Jatuh Tempo' | 'Kadaluarsa' | string;
   tgl_jatuh_tempo: string;
   paid_at?: string;
   tgl_invoice?: string;
   metode_pembayaran?: string;
   payment_link?: string;
   brand?: string;
+  nama_pelanggan?: string;
 }
 
 export interface CustomerData {
@@ -151,7 +152,7 @@ export async function getCustomerByEmail(email: string): Promise<CustomerData | 
     // Fetch related data
     const [langganan, invoices] = await Promise.all([
       getLanggananByPelangganId(pelanggan.id),
-      getInvoicesByPelangganId(pelanggan.id),
+      getInvoicesByPelangganId(pelanggan.id, pelanggan.nama),
     ]);
 
     return {
@@ -201,7 +202,7 @@ export async function getCustomerByPhone(phone: string): Promise<CustomerData | 
 
     const [langganan, invoices] = await Promise.all([
       getLanggananByPelangganId(pelanggan.id),
-      getInvoicesByPelangganId(pelanggan.id),
+      getInvoicesByPelangganId(pelanggan.id, pelanggan.nama),
     ]);
 
     return {
@@ -240,7 +241,11 @@ export async function getLanggananByPelangganId(pelangganId: number): Promise<La
     const data = await response.json();
     const langgananData = data.data || data;
     if (Array.isArray(langgananData)) {
-      const matchedLangganan = langgananData.find((l: Langganan) => l.pelanggan_id === pelangganId);
+      // Use loose equality and check multiple possible field names for robustness
+      const matchedLangganan = langgananData.find((l: any) => {
+        const itemPelangganId = l.pelanggan_id || l.id_pelanggan;
+        return String(itemPelangganId) == String(pelangganId);
+      });
       return matchedLangganan || null;
     }
     return langgananData;
@@ -251,30 +256,101 @@ export async function getLanggananByPelangganId(pelangganId: number): Promise<La
 }
 
 /**
- * Fetch invoices by customer ID
+ * Fetch invoices by customer ID with multiple fallback strategies
  */
-export async function getInvoicesByPelangganId(pelangganId: number): Promise<Invoice[]> {
+export async function getInvoicesByPelangganId(pelangganId: number, customerName?: string): Promise<Invoice[]> {
   try {
     const token = await getAdminToken();
+    const timestamp = Date.now();
+    
+    // List of possible endpoints to try
+    const endpoints = ['/invoices/', '/tagihan/', '/invoice/'];
+    let rawInvoices: any[] = [];
+    
+    // Try each endpoint
+    for (const endpoint of endpoints) {
+      // Strategy 1: Search by Pelanggan ID using multiple possible parameter names
+      const searchParams = new URLSearchParams({
+        search: String(pelangganId),
+        pelanggan_id: String(pelangganId),
+        id_pelanggan: String(pelangganId),
+        limit: '100',
+        _t: String(timestamp)
+      });
 
-    const response = await fetch(`${API_URL}/invoices?pelanggan_id=${pelangganId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-    });
+      const response = await fetch(`${API_URL}${endpoint}?${searchParams.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store',
+      });
 
-    if (!response.ok) {
+      if (response.ok) {
+        const data = await response.json();
+        const foundArray = extractArray(data);
+        if (foundArray.length > 0) {
+          rawInvoices = foundArray;
+          break;
+        }
+      }
+
+      // Strategy 2: If ID search returned nothing, try searching by Customer Name
+      if (customerName) {
+        const nameParams = new URLSearchParams({
+          search: customerName,
+          limit: '100',
+          _t: String(timestamp)
+        });
+
+        const nameResponse = await fetch(`${API_URL}${endpoint}?${nameParams.toString()}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          cache: 'no-store',
+        });
+
+        if (nameResponse.ok) {
+          const data = await nameResponse.json();
+          const foundArray = extractArray(data);
+          if (foundArray.length > 0) {
+            rawInvoices = foundArray;
+            break;
+          }
+        }
+      }
+    }
+
+    // Helper to extract array from various possible response structures
+    function extractArray(data: any): any[] {
+      if (Array.isArray(data)) return data;
+      if (data.data && Array.isArray(data.data)) return data.data;
+      if (data.invoices && Array.isArray(data.invoices)) return data.invoices;
+      if (data.tagihan && Array.isArray(data.tagihan)) return data.tagihan;
+      if (typeof data === 'object' && data !== null) {
+        const possibleArray = Object.values(data).find(val => Array.isArray(val));
+        return Array.isArray(possibleArray) ? possibleArray : [];
+      }
       return [];
     }
 
-    const data = await response.json();
-    const invoicesData = data.data || data;
-    const allInvoices = Array.isArray(invoicesData) ? invoicesData : [];
-
-    return allInvoices.filter((inv: Invoice) => inv.pelanggan_id === pelangganId);
+    // Final local filtering for safety
+    return rawInvoices.filter((inv: any) => {
+      // 1. Match by ID (numeric or string)
+      const invPelangganId = inv.pelanggan_id || inv.id_pelanggan || inv.customer_id;
+      if (invPelangganId && String(invPelangganId) == String(pelangganId)) return true;
+      
+      // 2. Match by Name (case-insensitive partial match)
+      if (customerName) {
+        const invName = inv.nama_pelanggan || inv.pelanggan?.nama || inv.customer_name || inv.nama;
+        if (invName && String(invName).toLowerCase().includes(customerName.toLowerCase())) return true;
+      }
+      
+      return false;
+    });
   } catch (error) {
     console.error('Error fetching invoices:', error);
     return [];

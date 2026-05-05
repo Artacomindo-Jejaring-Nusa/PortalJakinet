@@ -24,7 +24,7 @@
   border-radius:1.25rem; padding:1rem; display:flex; flex-direction:column;
   gap:0.25rem; position:relative; overflow:hidden;
 }
-.pm-status-card--active { background:linear-gradient(135deg,#991b1b 0%,#dc2626 100%); color:#fff; }
+.pm-status-card--active { background:linear-gradient(135deg,#0ea5e9 0%,#2563eb 100%); color:#fff; }
 .pm-status-card--suspended { background:linear-gradient(135deg,#991b1b 0%,#dc2626 100%); color:#fff; }
 .pm-status-card-label { font-size:0.6875rem; font-weight:600; opacity:0.8; }
 .pm-status-card-badge { font-size:0.625rem; font-weight:700; padding:0.125rem 0.5rem; border-radius:9999px; width:fit-content; }
