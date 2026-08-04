@@ -15,6 +15,15 @@ export default function PortalDashboardClient({ customerData }: Props) {
   const [invoiceFilter, setInvoiceFilter] = useState<'all' | 'unpaid' | 'paid'>('all');
   const [mobileTab, setMobileTab] = useState<'home' | 'history' | 'pesan' | 'settings'>('home');
 
+  const brandName = customerData?.pelanggan?.harga_layanan?.brand?.toUpperCase() || '';
+  const brandId = customerData?.pelanggan?.id_brand?.toLowerCase() || '';
+  const isJelantik = brandName.includes('JELANTIK') || brandId === 'ajn-02' || brandId === 'ajn-03';
+  const brandKey = isJelantik ? 'jelantik' : 'jakinet';
+  const brandTitle = isJelantik ? 'Portal Jelantik' : 'Portal Jakinet';
+  const brandLogo = isJelantik ? '/images/icons/jelantik.webp' : '/images/icons/jakinet.png';
+  const brandSupportText = isJelantik ? 'Pesan dari Jelantik akan muncul di sini' : 'Pesan dari Jakinet akan muncul di sini';
+  const brandWhatsapp = isJelantik ? 'https://wa.me/6282223616884' : 'https://wa.me/6281188809633';
+
   const handleLogout = async () => {
     setLogoutLoading(true);
     try {
@@ -28,37 +37,65 @@ export default function PortalDashboardClient({ customerData }: Props) {
     }
   };
 
-  const filteredInvoices = customerData.invoices.filter((invoice) => {
+  // Helper: check if an invoice is expired/kadaluarsa
+  const isExpiredInvoice = (invoice: any) => {
+    if (!invoice) return true;
+    const status = invoice.status_invoice?.toLowerCase() || '';
+    if (status === 'kadaluarsa' || status === 'expired') return true;
+    
+    // Unpaid invoice whose due date has passed by more than 5 days → considered expired
+    if (status === 'lunas') return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dueDate = invoice.tgl_jatuh_tempo ? new Date(invoice.tgl_jatuh_tempo) : null;
+    if (!dueDate || isNaN(dueDate.getTime())) return false;
+    dueDate.setHours(0, 0, 0, 0);
+    const diffDays = (today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24);
+    return diffDays > 5;
+  };
+
+  // Active invoices = non-expired
+  const activeInvoices = (customerData?.invoices || []).filter((inv) => inv && !isExpiredInvoice(inv));
+
+  const filteredInvoices = activeInvoices.filter((invoice) => {
+    if (!invoice) return false;
     if (invoiceFilter === 'all') return true;
     if (invoiceFilter === 'unpaid') return invoice.status_invoice !== 'Lunas';
     if (invoiceFilter === 'paid') return invoice.status_invoice === 'Lunas';
     return true;
   });
 
-  const totalUnpaid = customerData.invoices
-    .filter((inv) => inv.status_invoice !== 'Lunas')
+  const totalUnpaid = activeInvoices
+    .filter((inv) => inv && inv.status_invoice !== 'Lunas')
     .reduce((sum, inv) => sum + (inv.total_harga || 0), 0);
 
-  const unpaidCount = customerData.invoices.filter((inv) => inv.status_invoice !== 'Lunas').length;
+  const unpaidCount = activeInvoices.filter((inv) => inv && inv.status_invoice !== 'Lunas').length;
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | null | undefined) => {
+    const val = Number(amount || 0);
+    if (isNaN(val)) return 'Rp 0';
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
       minimumFractionDigits: 0,
-    }).format(amount);
+    }).format(val);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('id-ID', {
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return '-';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '-';
+    return d.toLocaleDateString('id-ID', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     });
   };
 
-  const formatDateShort = (dateString: string) => {
+  const formatDateShort = (dateString: string | null | undefined) => {
+    if (!dateString) return { day: '-', month: '-', year: '-' };
     const d = new Date(dateString);
+    if (isNaN(d.getTime())) return { day: '-', month: 'Invalid Date', year: '-' };
     return {
       day: d.getDate(),
       month: d.toLocaleDateString('id-ID', { month: 'long' }),
@@ -67,24 +104,9 @@ export default function PortalDashboardClient({ customerData }: Props) {
   };
 
   const calculateSubscriptionStatus = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const overdueInvoice = customerData.invoices.find((invoice) => {
-      const status = invoice.status_invoice?.toLowerCase() || '';
-      if (status === 'lunas') return false;
-      
-      // If API explicitly says it's expired or overdue, it's suspended
-      if (status === 'kadaluarsa' || status === 'tunggakan' || status === 'macet') return true;
-      
-      const dueDate = new Date(invoice.tgl_jatuh_tempo);
-      dueDate.setHours(0, 0, 0, 0);
-      return dueDate < today;
-    });
-
-    if (overdueInvoice) return 'Suspended';
+    // Use backend status as the source of truth (synced with admin dashboard)
+    const status = customerData?.langganan?.status || 'Aktif';
     
-    const status = customerData.langganan?.status || 'Aktif';
     if (status.toLowerCase().includes('suspend')) return 'Suspended';
     if (status.toLowerCase().includes('non-aktif') || status.toLowerCase() === 'non aktif') return 'Non-Aktif';
     
@@ -94,23 +116,27 @@ export default function PortalDashboardClient({ customerData }: Props) {
   const actualSubscriptionStatus = calculateSubscriptionStatus();
   const isActive = actualSubscriptionStatus.toLowerCase() === 'aktif';
 
-  // Find the nearest due date for mobile display
-  const nextDueInvoice = customerData.invoices
-    .filter((inv) => inv.status_invoice !== 'Lunas')
-    .sort((a, b) => new Date(a.tgl_jatuh_tempo).getTime() - new Date(b.tgl_jatuh_tempo).getTime())[0];
+  // Find the nearest due date for mobile display (only active invoices)
+  const nextDueInvoice = activeInvoices
+    .filter((inv) => inv && inv.status_invoice !== 'Lunas')
+    .sort((a, b) => {
+      const aTime = a.tgl_jatuh_tempo ? new Date(a.tgl_jatuh_tempo).getTime() : 0;
+      const bTime = b.tgl_jatuh_tempo ? new Date(b.tgl_jatuh_tempo).getTime() : 0;
+      return aTime - bTime;
+    })[0];
 
-  const nextDue = nextDueInvoice ? formatDateShort(nextDueInvoice.tgl_jatuh_tempo) : null;
+  const nextDue = nextDueInvoice?.tgl_jatuh_tempo ? formatDateShort(nextDueInvoice.tgl_jatuh_tempo) : null;
 
   // Extract speed from layanan name
-  const layananName = customerData.pelanggan.layanan || 'Internet 10 Mbps';
+  const layananName = customerData?.pelanggan?.layanan || 'Internet 10 Mbps';
   const speedMatch = layananName.match(/(\d+)\s*Mbps/i);
   const speed = speedMatch ? speedMatch[1] : '10';
 
   // Get customer ID display
-  const customerId = customerData.pelanggan.id.toString().padStart(10, '0');
+  const customerId = (customerData?.pelanggan?.id || '').toString().padStart(10, '0');
 
   return (
-    <div className="portal-root">
+    <div className={`portal-root theme-${brandKey}`}>
       {/* ==================== DESKTOP LAYOUT ==================== */}
       <div className="portal-desktop">
         {/* --- ELITE HEADER --- */}
@@ -122,14 +148,14 @@ export default function PortalDashboardClient({ customerData }: Props) {
                 <a href="/" className="portal-logo-link">
                   <div className="portal-logo-img-wrap">
                     <Image
-                      src="/images/icons/jakinet.png"
+                      src={brandLogo}
                       alt="Logo"
                       fill
                       className="portal-logo-img"
                     />
                   </div>
                   <div className="portal-logo-text-wrap">
-                    <h1 className="portal-logo-title">Portal Jakinet</h1>
+                    <h1 className="portal-logo-title">{brandTitle}</h1>
                     <span className="portal-logo-subtitle">Customer Area</span>
                   </div>
                 </a>
@@ -137,9 +163,6 @@ export default function PortalDashboardClient({ customerData }: Props) {
 
               {/* Actions */}
               <div className="portal-header-right">
-                <a href="https://ajnusa.com" target="_blank" rel="noopener noreferrer" className="portal-header-link">
-                  Website Utama
-                </a>
                 <div className="portal-header-divider"></div>
                 <button
                   onClick={handleLogout}
@@ -172,7 +195,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
           {/* --- GREETING SECTION --- */}
           <div className="portal-greeting">
             <div>
-              <h2 className="portal-greeting-name">Halo, {customerData.pelanggan.nama}!</h2>
+              <h2 className="portal-greeting-name">Halo, {customerData?.pelanggan?.nama || 'Pelanggan'}!</h2>
               <p className="portal-greeting-desc">Selamat datang kembali di pusat kendali layanan internet Anda.</p>
             </div>
             <div className="portal-greeting-status-wrap">
@@ -347,7 +370,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
                       </div>
                       <div>
                         <p className="portal-profile-field-label">Nama Lengkap</p>
-                        <p className="portal-profile-field-value">{customerData.pelanggan.nama}</p>
+                        <p className="portal-profile-field-value">{customerData?.pelanggan?.nama || '-'}</p>
                       </div>
                     </div>
 
@@ -359,7 +382,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
                       </div>
                       <div>
                         <p className="portal-profile-field-label">Email Aktif</p>
-                        <p className="portal-profile-field-value portal-profile-field-value--truncate">{customerData.pelanggan.email}</p>
+                        <p className="portal-profile-field-value portal-profile-field-value--truncate">{customerData?.pelanggan?.email || '-'}</p>
                       </div>
                     </div>
 
@@ -371,7 +394,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
                       </div>
                       <div>
                         <p className="portal-profile-field-label">WhatsApp</p>
-                        <p className="portal-profile-field-value">{customerData.pelanggan.no_telp}</p>
+                        <p className="portal-profile-field-value">{customerData?.pelanggan?.no_telp || '-'}</p>
                       </div>
                     </div>
 
@@ -385,10 +408,10 @@ export default function PortalDashboardClient({ customerData }: Props) {
                       <div>
                         <p className="portal-profile-field-label">Lokasi Pemasangan</p>
                         <p className="portal-profile-field-value portal-profile-field-value--sm">
-                          {customerData.pelanggan.alamat_2 || customerData.pelanggan.alamat}
-                          {customerData.pelanggan.blok && (
+                          {customerData?.pelanggan?.alamat_2 || customerData?.pelanggan?.alamat || '-'}
+                          {customerData?.pelanggan?.blok && (
                             <span className="portal-profile-blok">
-                              Blok {customerData.pelanggan.blok}, Unit {customerData.pelanggan.unit}
+                              Blok {customerData?.pelanggan?.blok}, Unit {customerData?.pelanggan?.unit}
                             </span>
                           )}
                         </p>
@@ -400,7 +423,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
                     <p className="portal-profile-help-title">Butuh Bantuan?</p>
                     <p className="portal-profile-help-desc">Kami siap membantu kendala koneksi internet Anda kapan saja.</p>
                     <a
-                      href="https://wa.me/6281188809633"
+                      href={brandWhatsapp}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="portal-profile-wa-btn"
@@ -423,7 +446,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
             <div className="portal-footer-brand">
               <div className="portal-footer-brand-icon">J</div>
               <div className="portal-footer-brand-text">
-                <span className="portal-footer-brand-name">Portal Jakinet</span>
+                <span className="portal-footer-brand-name">{brandTitle}</span>
                 <span className="portal-footer-brand-sub">Fiber Optic Specialist</span>
               </div>
             </div>
@@ -443,7 +466,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
         {/* Mobile Header Card */}
         <div className="pm-header-card">
           <div className="pm-header-inner">
-            <h2 className="pm-header-name">Hi, {customerData.pelanggan.nama}</h2>
+            <h2 className="pm-header-name">Hi, {customerData?.pelanggan?.nama || 'Pelanggan'}</h2>
             <button className="pm-header-id" onClick={() => navigator.clipboard?.writeText(customerId)}>
               <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ opacity: 0.5 }}>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -486,12 +509,12 @@ export default function PortalDashboardClient({ customerData }: Props) {
 
                 {/* Speed Card */}
                 <div className="pm-speed-card">
-                  <span className="pm-speed-card-label">{customerData.pelanggan.harga_layanan?.brand || 'Jakinet'}</span>
+                  <span className="pm-speed-card-label">{customerData?.pelanggan?.harga_layanan?.brand || (isJelantik ? 'Jelantik' : 'Jakinet')}</span>
                   <div className="pm-speed-card-value">
                     <span className="pm-speed-number">{speed}</span>
                     <span className="pm-speed-unit">Mbps</span>
                   </div>
-                  <span className="pm-speed-card-ont">ONT : {customerData.pelanggan.id_brand || 'N/A'}</span>
+                  <span className="pm-speed-card-ont">ONT : {customerData?.pelanggan?.id_brand || 'N/A'}</span>
                 </div>
               </div>
 
@@ -524,7 +547,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
                   </div>
                   <span className="pm-quick-action-label">Pembayaran</span>
                 </a>
-                <a href="https://wa.me/6281188809633" target="_blank" rel="noopener noreferrer" className="pm-quick-action">
+                <a href={brandWhatsapp} target="_blank" rel="noopener noreferrer" className="pm-quick-action">
                   <div className="pm-quick-action-icon">
                     <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -532,14 +555,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
                   </div>
                   <span className="pm-quick-action-label">Customer Support</span>
                 </a>
-                <a href="https://www.speedtest.net/" target="_blank" rel="noopener noreferrer" className="pm-quick-action">
-                  <div className="pm-quick-action-icon">
-                    <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
-                  <span className="pm-quick-action-label">SpeedTest</span>
-                </a>
+                
               </div>
 
               {/* Recent Payments Section */}
@@ -549,7 +565,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
                   <span className="pm-offers-link" onClick={() => setMobileTab('history')}>Lihat semua riwayat →</span>
                 </div>
                 <div className="pm-offers-list">
-                  {customerData.invoices.length === 0 ? (
+                  {activeInvoices.length === 0 ? (
                     <div className="pm-history-empty" style={{ padding: '2rem 0' }}>
                       <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#cbd5e1' }}>
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -557,7 +573,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
                       <p>Belum ada riwayat pembayaran</p>
                     </div>
                   ) : (
-                    customerData.invoices.slice(0, 3).map((invoice) => (
+                    activeInvoices.slice(0, 3).map((invoice) => (
                       <div key={invoice.id} className="pm-history-item">
                         <div className="pm-history-item-top">
                           <div className={`pm-history-item-dot ${invoice.status_invoice === 'Lunas' ? 'pm-history-item-dot--paid' : 'pm-history-item-dot--unpaid'}`}></div>
@@ -653,9 +669,9 @@ export default function PortalDashboardClient({ customerData }: Props) {
                   </svg>
                 </div>
                 <p className="pm-pesan-empty-text">Belum ada pesan</p>
-                <p className="pm-pesan-empty-sub">Pesan dari Jakinet akan muncul di sini</p>
+                <p className="pm-pesan-empty-sub">{brandSupportText}</p>
                 <a
-                  href="https://wa.me/6281188809633"
+                  href={brandWhatsapp}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="pm-pesan-wa-btn"
@@ -681,8 +697,8 @@ export default function PortalDashboardClient({ customerData }: Props) {
                   </svg>
                 </div>
                 <div>
-                  <p className="pm-settings-name">{customerData.pelanggan.nama}</p>
-                  <p className="pm-settings-email">{customerData.pelanggan.email}</p>
+                  <p className="pm-settings-name">{customerData?.pelanggan?.nama || '-'}</p>
+                  <p className="pm-settings-email">{customerData?.pelanggan?.email || '-'}</p>
                 </div>
               </div>
 
@@ -694,7 +710,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
                     </svg>
                     <span>WhatsApp</span>
                   </div>
-                  <span className="pm-settings-item-value">{customerData.pelanggan.no_telp}</span>
+                  <span className="pm-settings-item-value">{customerData?.pelanggan?.no_telp || '-'}</span>
                 </div>
                 <div className="pm-settings-item">
                   <div className="pm-settings-item-left">
@@ -704,7 +720,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
                     </svg>
                     <span>Lokasi</span>
                   </div>
-                  <span className="pm-settings-item-value">{customerData.pelanggan.alamat_2 || customerData.pelanggan.alamat}</span>
+                  <span className="pm-settings-item-value">{customerData?.pelanggan?.alamat_2 || customerData?.pelanggan?.alamat || '-'}</span>
                 </div>
                 <div className="pm-settings-item">
                   <div className="pm-settings-item-left">

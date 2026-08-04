@@ -12,9 +12,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Portal Jakinet - Customer Area',
-  description: 'Kelola tagihan internet Anda dengan mudah dalam satu portal. Portal Pelanggan Jakinet by PT. Artacomindo Jejaring Nusa.',
-  keywords: ['portal', 'jakinet', 'customer', 'billing', 'internet', 'ISP'],
+  title: 'Portal Pelanggan - Customer Area',
+  description: 'Kelola tagihan internet Anda dengan mudah dalam satu portal.',
+  keywords: ['portal', 'pelanggan', 'customer', 'billing', 'internet', 'ISP'],
   robots: 'noindex, nofollow',
 };
 
@@ -27,7 +27,7 @@ export default function RootLayout({
     <html lang="id" className={inter.variable}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-        <link rel="icon" href="/favicon.png" />
+        {/* <link rel="icon" href="/favicon.png" /> */}
       </head>
       <body className={inter.className}>
         <div className="min-h-screen bg-[#F8FAFC]">

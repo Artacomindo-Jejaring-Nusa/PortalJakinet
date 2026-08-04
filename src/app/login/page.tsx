@@ -7,7 +7,6 @@
 
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -54,18 +53,15 @@ export default function LoginPage() {
       {(loading || isSuccess) && (
         <div className="fixed inset-0 z-100 flex flex-col items-center justify-center bg-white/80 backdrop-blur-md animate-in fade-in duration-300">
           <div className="relative mb-8">
-            <div className="w-20 h-20 rounded-3xl bg-white shadow-2xl flex items-center justify-center p-4 animate-bounce">
-              <Image
-                src="/images/icons/jakinet.png"
-                alt="Jakinet"
-                width={48}
-                height={48}
-              />
+            <div className="w-20 h-20 rounded-3xl bg-blue-600 text-white shadow-2xl flex items-center justify-center p-5 animate-bounce">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-full h-full">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+              </svg>
             </div>
-            <div className="absolute -inset-2 border-2 border-red-600 rounded-[2rem] animate-ping opacity-20"></div>
+            <div className="absolute -inset-2 border-2 border-blue-600 rounded-[2rem] animate-ping opacity-20"></div>
           </div>
           <div className="flex items-center gap-3">
-            <svg className="w-5 h-5 text-red-600 animate-spin" fill="none" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-blue-600 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
@@ -88,16 +84,12 @@ export default function LoginPage() {
         {/* Brand/Back Link */}
         <div className="portal-login-topbar">
           <div className="portal-login-brand">
-            <div className="portal-login-brand-icon">
-              <Image
-                src="/images/icons/jakinet.png"
-                alt="Jakinet"
-                width={32}
-                height={32}
-                className="portal-login-brand-img"
-              />
+            <div className="portal-login-brand-icon flex items-center justify-center bg-blue-600 text-white p-1.5 rounded-lg">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-full h-full">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+              </svg>
             </div>
-            <span className="portal-login-brand-text">Portal Jakinet</span>
+            <span className="portal-login-brand-text">Portal Pelanggan</span>
           </div>
         </div>
 
@@ -177,7 +169,7 @@ export default function LoginPage() {
             </form>
 
             {/* Support */}
-            <div className="portal-login-support">
+            {/* <div className="portal-login-support">
               <p className="portal-login-support-text">
                 Belum punya akun atau butuh bantuan?
               </p>
@@ -192,13 +184,13 @@ export default function LoginPage() {
                 </svg>
                 Hubungi WhatsApp CS
               </a>
-            </div>
+            </div> */}
           </div>
         </div>
 
         {/* Footer info */}
         <p className="portal-login-footer">
-          © {new Date().getFullYear()} Jakinet. All rights reserved.
+          © {new Date().getFullYear()} Portal Pelanggan. All rights reserved.
         </p>
       </div>
     </div>

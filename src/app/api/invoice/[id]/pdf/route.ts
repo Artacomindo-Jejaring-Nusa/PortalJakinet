@@ -50,9 +50,15 @@ export async function GET(
     // Read logo image and convert to base64 for embedding in HTML
     let logoBase64 = '';
     try {
-      const logoPath = path.join(process.cwd(), 'public', 'images', 'icons', 'jakinet.png');
+      const brandName = customerData.pelanggan.harga_layanan?.brand?.toUpperCase() || '';
+      const brandId = customerData.pelanggan.id_brand?.toLowerCase() || '';
+      const isJelantik = brandName.includes('JELANTIK') || brandId === 'ajn-02' || brandId === 'ajn-03';
+      const logoFilename = isJelantik ? 'jelantik.webp' : 'jakinet.png';
+      const logoMime = isJelantik ? 'image/webp' : 'image/png';
+
+      const logoPath = path.join(process.cwd(), 'public', 'images', 'icons', logoFilename);
       const logoBuffer = fs.readFileSync(logoPath);
-      logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+      logoBase64 = `data:${logoMime};base64,${logoBuffer.toString('base64')}`;
     } catch (err) {
       console.error('Could not read logo file:', err);
     }
@@ -75,6 +81,13 @@ export async function GET(
 
 function generateInvoiceHTML(invoice: any, customerData: any, logoBase64: string): string {
   const pelanggan = customerData.pelanggan;
+
+  const brandName = pelanggan.harga_layanan?.brand?.toUpperCase() || '';
+  const brandId = pelanggan.id_brand?.toLowerCase() || '';
+  const isJelantik = brandName.includes('JELANTIK') || brandId === 'ajn-02' || brandId === 'ajn-03';
+
+  const compName = isJelantik ? 'JELANTIK' : 'JAKINET';
+  const compInitials = isJelantik ? 'JL' : 'JK';
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -399,9 +412,9 @@ function generateInvoiceHTML(invoice: any, customerData: any, logoBase64: string
 
     <div class="header">
       <div class="brand-section">
-        <div class="logo-box">${logoBase64 ? `<img src="${logoBase64}" alt="Jakinet Logo" />` : 'JK'}</div>
+        <div class="logo-box">${logoBase64 ? `<img src="${logoBase64}" alt="${compName} Logo" />` : compInitials}</div>
         <div class="company-info">
-          <h1>JAKINET</h1>
+          <h1>${compName}</h1>
           <p>Internet Service Provider</p>
           <p>Telp: 082223616884</p>
         </div>
@@ -509,7 +522,7 @@ function generateInvoiceHTML(invoice: any, customerData: any, logoBase64: string
     `}
 
     <div class="footer">
-      <p>Terima kasih atas kepercayaan Anda menggunakan layanan <strong>JAKINET</strong></p>
+      <p>Terima kasih atas kepercayaan Anda menggunakan layanan <strong>${compName}</strong></p>
       <p>Untuk pertanyaan, hubungi: 082223616884 | sales@ajnusa.com</p>
     </div>
   </div>
