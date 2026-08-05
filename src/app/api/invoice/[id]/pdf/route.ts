@@ -23,17 +23,32 @@ export async function GET(
 
     // Get session to identify customer
     const session = await getSession();
+    let customerPhone = session?.customerPhone;
+    let customerEmail = session?.customerEmail;
+
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      // Fallback: Check query parameters for authentication
+      const queryPhone = request.nextUrl.searchParams.get('phone');
+      const queryEmail = request.nextUrl.searchParams.get('email');
+      if (queryPhone) {
+        customerPhone = queryPhone;
+      }
+      if (queryEmail) {
+        customerEmail = queryEmail;
+      }
+      
+      if (!customerPhone && !customerEmail) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
     }
 
     // Get customer data
     let customerData = null;
-    if (session.customerEmail) {
-      customerData = await getCustomerByEmail(session.customerEmail);
+    if (customerEmail) {
+      customerData = await getCustomerByEmail(customerEmail);
     }
-    if (!customerData && session.customerPhone) {
-      customerData = await getCustomerByPhone(session.customerPhone);
+    if (!customerData && customerPhone) {
+      customerData = await getCustomerByPhone(customerPhone);
     }
 
     if (!customerData) {
