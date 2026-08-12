@@ -5,8 +5,8 @@
 
 const API_URL = process.env.BILLING_API_URL || 'https://jpo.jelantik.com/api/v1';
 const API_KEY = process.env.BILLING_API_KEY;
-// const API_USERNAME = process.env.BILLING_API_USERNAME || 'ahmad@ajnusa.com';
-// const API_PASSWORD = process.env.BILLING_API_PASSWORD || 'password';
+const API_USERNAME = process.env.BILLING_API_USERNAME || 'ahmad@ajnusa.com';
+const API_PASSWORD = process.env.BILLING_API_PASSWORD || 'password';
 
 // Token cache for admin authentication
 let adminToken: string | null = null;
