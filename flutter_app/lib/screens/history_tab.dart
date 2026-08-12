@@ -139,15 +139,27 @@ class _HistoryTabState extends State<HistoryTab> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: isPaid ? Colors.green.shade50 : Colors.red.shade50,
+                                      color: isPaid
+                                          ? Colors.green.shade50
+                                          : (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
+                                              ? Colors.orange.shade50
+                                              : Colors.red.shade50,
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
-                                      invoice.statusInvoice,
+                                      isPaid 
+                                          ? 'Lunas' 
+                                          : (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
+                                              ? 'Terlambat' 
+                                              : invoice.statusInvoice,
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
-                                        color: isPaid ? Colors.green.shade700 : Colors.red.shade700,
+                                        color: isPaid
+                                            ? Colors.green.shade700
+                                            : (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
+                                                ? Colors.orange.shade700
+                                                : Colors.red.shade700,
                                       ),
                                     ),
                                   ),

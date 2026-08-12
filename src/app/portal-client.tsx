@@ -41,17 +41,20 @@ export default function PortalDashboardClient({ customerData }: Props) {
   const isExpiredInvoice = (invoice: any) => {
     if (!invoice) return true;
     const status = invoice.status_invoice?.toLowerCase() || '';
-    if (status === 'kadaluarsa' || status === 'expired') return true;
-    
-    // Unpaid invoice whose due date has passed by more than 5 days → considered expired
     if (status === 'lunas') return false;
+
+    // Show unpaid invoice even if it is marked kadaluarsa/expired if it has a payment link
+    const hasPaymentLink = !!invoice.payment_link && invoice.payment_link !== '#';
+    if ((status === 'kadaluarsa' || status === 'expired') && !hasPaymentLink) return true;
+    
+    // Unpaid invoice whose due date has passed by more than 7 days → considered expired
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dueDate = invoice.tgl_jatuh_tempo ? new Date(invoice.tgl_jatuh_tempo) : null;
     if (!dueDate || isNaN(dueDate.getTime())) return false;
     dueDate.setHours(0, 0, 0, 0);
     const diffDays = (today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24);
-    return diffDays > 5;
+    return diffDays > 7;
   };
 
   // Active invoices = non-expired
@@ -319,7 +322,11 @@ export default function PortalDashboardClient({ customerData }: Props) {
                               <div className="portal-invoice-status-row">
                                 <div className={`portal-invoice-status-dot ${invoice.status_invoice === 'Lunas' ? 'portal-invoice-status-dot--paid' : 'portal-invoice-status-dot--unpaid'}`}></div>
                                 <span className={`portal-invoice-status-text ${invoice.status_invoice === 'Lunas' ? 'portal-invoice-status-text--paid' : 'portal-invoice-status-text--unpaid'}`}>
-                                  {invoice.status_invoice === 'Lunas' ? 'Sudah Bayar' : 'Belum Bayar'}
+                                  {invoice.status_invoice === 'Lunas' 
+                                    ? 'Sudah Bayar' 
+                                    : (invoice.status_invoice?.toLowerCase() === 'kadaluarsa' || invoice.status_invoice?.toLowerCase() === 'expired')
+                                      ? 'Terlambat' 
+                                      : 'Belum Bayar'}
                                 </span>
                               </div>
                             </div>

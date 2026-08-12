@@ -104,8 +104,7 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {/* Login Form */}
-            <form onSubmit={handleSubmit} className="portal-login-form">
+            <form onSubmit={handleSubmit} className="portal-login-form" autoComplete="on" suppressHydrationWarning={true}>
               <div className="portal-login-field">
                 <label htmlFor="identifier" className="portal-login-label">
                   Email atau Nomor Telepon
@@ -124,6 +123,8 @@ export default function LoginPage() {
                     placeholder="nama@email.com - 08123456789"
                     className="portal-login-input"
                     disabled={loading || isSuccess}
+                    autoComplete="username"
+                    suppressHydrationWarning={true}
                     required
                   />
                 </div>
@@ -145,6 +146,7 @@ export default function LoginPage() {
                 type="submit"
                 disabled={loading || isSuccess}
                 className="portal-login-btn"
+                suppressHydrationWarning={true}
               >
                 {isSuccess ? (
                   <span className="portal-login-btn-loading">

@@ -63,8 +63,11 @@ class Invoice {
 
   bool isExpired() {
     final status = statusInvoice.toLowerCase();
-    if (status == 'kadaluarsa' || status == 'expired') return true;
     if (status == 'lunas') return false;
+
+    // Show unpaid invoice even if marked kadaluarsa/expired if it has a payment link
+    final hasPaymentLink = paymentLink != null && paymentLink!.isNotEmpty && paymentLink != '#';
+    if ((status == 'kadaluarsa' || status == 'expired') && !hasPaymentLink) return true;
 
     if (tglJatuhTempo.isEmpty) return false;
     try {
@@ -73,7 +76,7 @@ class Invoice {
       final dueDate = DateTime.parse(tglJatuhTempo);
       final dueDateZero = DateTime(dueDate.year, dueDate.month, dueDate.day);
       final diffDays = todayZero.difference(dueDateZero).inDays;
-      return diffDays > 5;
+      return diffDays > 7;
     } catch (e) {
       return false;
     }

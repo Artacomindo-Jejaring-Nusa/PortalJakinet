@@ -418,17 +418,25 @@ class HomeTab extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: isPaid
                                 ? Colors.green.shade50
-                                : Colors.red.shade50,
+                                : (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
+                                    ? Colors.orange.shade50
+                                    : Colors.red.shade50,
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            invoice.statusInvoice,
+                            isPaid 
+                                ? 'Lunas' 
+                                : (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
+                                    ? 'Terlambat' 
+                                    : invoice.statusInvoice,
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                               color: isPaid
                                   ? Colors.green.shade700
-                                  : Colors.red.shade700,
+                                  : (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
+                                      ? Colors.orange.shade700
+                                      : Colors.red.shade700,
                             ),
                           ),
                         ),
