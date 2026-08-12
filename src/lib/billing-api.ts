@@ -5,12 +5,6 @@
 
 const API_URL = process.env.BILLING_API_URL || 'https://jpo.jelantik.com/api/v1';
 const API_KEY = process.env.BILLING_API_KEY;
-const API_USERNAME = process.env.BILLING_API_USERNAME || 'ahmad@ajnusa.com';
-const API_PASSWORD = process.env.BILLING_API_PASSWORD || 'password';
-
-// Token cache for admin authentication
-let adminToken: string | null = null;
-let tokenExpiry: number = 0;
 
 export interface Pelanggan {
   id: number;
@@ -65,59 +59,14 @@ export interface CustomerData {
   invoices: Invoice[];
 }
 
-export interface AuthResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  expires_in: number;
-}
-
 /**
  * Get admin access token for API calls
- * Uses token caching to avoid unnecessary login requests
  */
 export async function getAdminToken(): Promise<string> {
-  // If API Key is configured, return it directly
-  if (API_KEY) {
-    return API_KEY;
+  if (!API_KEY) {
+    throw new Error('BILLING_API_KEY is not configured');
   }
-
-  const now = Date.now();
-
-  // Return cached token if still valid (with 5min buffer)
-  if (adminToken && tokenExpiry > now + 300000) {
-    return adminToken;
-  }
-
-  try {
-    const formData = new URLSearchParams();
-    formData.append('username', API_USERNAME);
-    formData.append('password', API_PASSWORD!);
-
-    const response = await fetch(`${API_URL}/auth/token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: formData.toString(),
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      throw new Error(`Authentication failed: ${response.status}`);
-    }
-
-    const data: AuthResponse = await response.json();
-
-    // Cache the token
-    adminToken = data.access_token;
-    tokenExpiry = now + (data.expires_in * 1000);
-
-    return data.access_token;
-  } catch (error) {
-    console.error('Error getting admin token:', error);
-    throw error;
-  }
+  return API_KEY;
 }
 
 /**
