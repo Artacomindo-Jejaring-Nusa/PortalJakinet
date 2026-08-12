@@ -12,6 +12,10 @@ class ApiService {
 
   // Get admin access token
   Future<String> _getAdminToken() async {
+    if (AppConstants.apiKey.isNotEmpty) {
+      return AppConstants.apiKey;
+    }
+
     final now = DateTime.now();
 
     if (_adminToken != null &&

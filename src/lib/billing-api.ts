@@ -3,9 +3,10 @@
  * Handles communication with the billing system API
  */
 
-const API_URL = process.env.BILLING_API_URL || 'https://billingftth.my.id/api';
-const API_USERNAME = process.env.BILLING_API_USERNAME || 'ahmad@ajnusa.com';
-const API_PASSWORD = process.env.BILLING_API_PASSWORD || 'password';
+const API_URL = process.env.BILLING_API_URL || 'https://jpo.jelantik.com/api/v1';
+const API_KEY = process.env.BILLING_API_KEY;
+// const API_USERNAME = process.env.BILLING_API_USERNAME || 'ahmad@ajnusa.com';
+// const API_PASSWORD = process.env.BILLING_API_PASSWORD || 'password';
 
 // Token cache for admin authentication
 let adminToken: string | null = null;
@@ -76,6 +77,11 @@ export interface AuthResponse {
  * Uses token caching to avoid unnecessary login requests
  */
 export async function getAdminToken(): Promise<string> {
+  // If API Key is configured, return it directly
+  if (API_KEY) {
+    return API_KEY;
+  }
+
   const now = Date.now();
 
   // Return cached token if still valid (with 5min buffer)
