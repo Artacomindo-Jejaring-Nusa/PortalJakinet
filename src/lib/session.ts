@@ -70,7 +70,7 @@ export async function createSession(data: Omit<SessionData, 'expiresAt'>): Promi
 
   cookieStore.set(SESSION_COOKIE_NAME, encrypted, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.NODE_ENV === 'production' && process.env.SECURE_COOKIE !== 'false',
     sameSite: 'lax',
     maxAge: SESSION_DURATION / 1000,
     path: '/',
