@@ -75,7 +75,7 @@ export async function getAdminToken(): Promise<string> {
 async function searchPelanggan(query: string): Promise<Pelanggan[]> {
   const token = await getAdminToken();
 
-  const response = await fetch(`${API_URL}/pelanggan/?search=${encodeURIComponent(query)}`, {
+  const response = await fetch(`${API_URL}/pelanggan?search=${encodeURIComponent(query)}`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -179,7 +179,7 @@ export async function getLanggananByPelangganId(pelangganId: number): Promise<La
     const token = await getAdminToken();
 
     const timestamp = Date.now();
-    const response = await fetch(`${API_URL}/langganan/?pelanggan_id=${pelangganId}&_t=${timestamp}`, {
+    const response = await fetch(`${API_URL}/langganan?pelanggan_id=${pelangganId}&_t=${timestamp}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -219,7 +219,7 @@ export async function getInvoicesByPelangganId(pelangganId: number, customerName
     const timestamp = Date.now();
     
     // List of possible endpoints to try
-    const endpoints = ['/invoices/', '/tagihan/', '/invoice/'];
+    const endpoints = ['/invoices', '/tagihan', '/invoice'];
     let rawInvoices: any[] = [];
     
     // Try each endpoint
