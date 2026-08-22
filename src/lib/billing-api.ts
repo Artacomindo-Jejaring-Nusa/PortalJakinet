@@ -53,10 +53,64 @@ export interface Invoice {
   nama_pelanggan?: string;
 }
 
+export interface TicketAction {
+  id?: number | string;
+  action_type?: string;
+  type?: string;
+  action?: string;
+  notes?: string;
+  note?: string;
+  description?: string;
+  pesan?: string;
+  created_at?: string;
+  date?: string;
+  tgl?: string;
+  user_name?: string;
+  user?: string | { nama?: string; name?: string; role?: string };
+  by?: string;
+  actor?: string;
+  role?: string;
+}
+
+export interface Ticket {
+  id: number;
+  ticket_number?: string;
+  no_tiket?: string;
+  ticket_no?: string;
+  number?: string;
+  pelanggan_id?: number;
+  id_pelanggan?: number;
+  judul?: string;
+  title?: string;
+  subject?: string;
+  kategori?: string;
+  category?: string;
+  deskripsi?: string;
+  description?: string;
+  pesan?: string;
+  status: string;
+  prioritas?: string;
+  priority?: string;
+  tgl_laporan?: string;
+  created_at?: string;
+  created?: string;
+  updated_at?: string;
+  solusi?: string;
+  solution?: string;
+  tanggapan?: string;
+  actions?: TicketAction[];
+  action_history?: TicketAction[];
+  action_taken_history?: TicketAction[];
+  history?: TicketAction[];
+  status_history?: TicketAction[];
+  logs?: TicketAction[];
+}
+
 export interface CustomerData {
   pelanggan: Pelanggan;
   langganan: Langganan | null;
   invoices: Invoice[];
+  tickets?: Ticket[];
 }
 
 /**
@@ -67,6 +121,115 @@ export async function getAdminToken(): Promise<string> {
     throw new Error('BILLING_API_KEY is not configured');
   }
   return API_KEY;
+}
+
+/**
+ * Fetch tickets by customer ID with multiple endpoint candidates (trouble-tickets, tickets, etc.)
+ */
+export async function getTicketsByPelangganId(pelangganId: number, customerName?: string): Promise<Ticket[]> {
+  try {
+    const token = await getAdminToken();
+    const timestamp = Date.now();
+    
+    // Candidates endpoints used by JPO Admin portal
+    const endpoints = [
+      '/trouble-tickets',
+      '/trouble_tickets',
+      '/trouble-ticket',
+      '/tickets',
+      '/tiket',
+      '/laporan',
+      '/portal/tickets'
+    ];
+    let rawTickets: any[] = [];
+    
+    for (const endpoint of endpoints) {
+      // Try querying with pelanggan_id, customer_id, and id_pelanggan
+      const paramKeys = ['pelanggan_id', 'customer_id', 'id_pelanggan'];
+      
+      for (const paramKey of paramKeys) {
+        const searchParams = new URLSearchParams({
+          [paramKey]: String(pelangganId),
+          _t: String(timestamp)
+        });
+
+        try {
+          const response = await fetch(`${API_URL}${endpoint}?${searchParams.toString()}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'X-API-Key': token,
+              'Content-Type': 'application/json',
+            },
+            cache: 'no-store',
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const foundArray = extractArray(data);
+            if (foundArray.length > 0) {
+              rawTickets = foundArray;
+              break;
+            }
+          }
+        } catch (e) {
+          // continue to next endpoint if fetch fails
+        }
+      }
+      
+      if (rawTickets.length > 0) break;
+    }
+
+    // Fallback: search all tickets if direct lookup returned empty
+    if (rawTickets.length === 0) {
+      try {
+        const response = await fetch(`${API_URL}/trouble-tickets?limit=200&_t=${timestamp}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'X-API-Key': token,
+            'Content-Type': 'application/json',
+          },
+          cache: 'no-store',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          rawTickets = extractArray(data);
+        }
+      } catch (e) {
+        // quiet fallback
+      }
+    }
+
+    function extractArray(data: any): any[] {
+      if (Array.isArray(data)) return data;
+      if (data.data && Array.isArray(data.data)) return data.data;
+      if (data['trouble-tickets'] && Array.isArray(data['trouble-tickets'])) return data['trouble-tickets'];
+      if (data.trouble_tickets && Array.isArray(data.trouble_tickets)) return data.trouble_tickets;
+      if (data.tickets && Array.isArray(data.tickets)) return data.tickets;
+      if (data.tiket && Array.isArray(data.tiket)) return data.tiket;
+      if (data.laporan && Array.isArray(data.laporan)) return data.laporan;
+      if (typeof data === 'object' && data !== null) {
+        const possibleArray = Object.values(data).find(val => Array.isArray(val));
+        return Array.isArray(possibleArray) ? possibleArray : [];
+      }
+      return [];
+    }
+
+    return rawTickets.filter((t: any) => {
+      if (!t) return false;
+      const ticketPelangganId = t.pelanggan_id || t.id_pelanggan || t.customer_id || t.pelanggan?.id;
+      if (ticketPelangganId && String(ticketPelangganId) === String(pelangganId)) return true;
+      if (customerName) {
+        const custName = t.customer_name || t.nama_pelanggan || t.customer || t.pelanggan?.nama || t.nama;
+        if (custName && String(custName).toLowerCase().includes(customerName.toLowerCase())) return true;
+      }
+      return false;
+    });
+  } catch (error) {
+    console.error('Error fetching tickets:', error);
+    return [];
+  }
 }
 
 /**
@@ -92,10 +255,17 @@ export async function getCustomerDirectLookup(identifier: string): Promise<Custo
 
     const result = await response.json();
     if (result && result.data && result.data.pelanggan) {
+      const pelangganId = result.data.pelanggan.id;
+      const customerName = result.data.pelanggan.nama;
+      const tickets = (result.data.tickets && result.data.tickets.length > 0) 
+        ? result.data.tickets 
+        : await getTicketsByPelangganId(pelangganId, customerName);
+      
       return {
         pelanggan: result.data.pelanggan,
         langganan: result.data.langganan || null,
         invoices: result.data.invoices || [],
+        tickets: tickets || [],
       };
     }
     return null;
@@ -146,15 +316,17 @@ export async function getCustomerByEmail(email: string): Promise<CustomerData | 
     }
 
     // Fetch related data
-    const [langganan, invoices] = await Promise.all([
+    const [langganan, invoices, tickets] = await Promise.all([
       getLanggananByPelangganId(pelanggan.id),
       getInvoicesByPelangganId(pelanggan.id, pelanggan.nama),
+      getTicketsByPelangganId(pelanggan.id),
     ]);
 
     return {
       pelanggan,
       langganan,
       invoices,
+      tickets,
     };
   } catch (error) {
     console.error('Error fetching customer by email:', error);
@@ -200,15 +372,17 @@ export async function getCustomerByPhone(phone: string): Promise<CustomerData | 
       return null;
     }
 
-    const [langganan, invoices] = await Promise.all([
+    const [langganan, invoices, tickets] = await Promise.all([
       getLanggananByPelangganId(pelanggan.id),
       getInvoicesByPelangganId(pelanggan.id, pelanggan.nama),
+      getTicketsByPelangganId(pelanggan.id),
     ]);
 
     return {
       pelanggan,
       langganan,
       invoices,
+      tickets,
     };
   } catch (error) {
     console.error('Error fetching customer by phone:', error);
@@ -338,3 +512,4 @@ export async function verifyCustomer(identifier: string): Promise<CustomerData |
     return getCustomerByPhone(identifier);
   }
 }
+

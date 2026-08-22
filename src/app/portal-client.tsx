@@ -13,7 +13,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
   const router = useRouter();
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [invoiceFilter, setInvoiceFilter] = useState<'all' | 'unpaid' | 'paid'>('all');
-  const [mobileTab, setMobileTab] = useState<'home' | 'history' | 'pesan' | 'settings'>('home');
+  const [mobileTab, setMobileTab] = useState<'home' | 'history' | 'tiket' | 'pesan' | 'settings'>('home');
 
   const brandName = customerData?.pelanggan?.harga_layanan?.brand?.toUpperCase() || '';
   const brandId = customerData?.pelanggan?.id_brand?.toLowerCase() || '';
@@ -23,6 +23,27 @@ export default function PortalDashboardClient({ customerData }: Props) {
   const brandLogo = isJelantik ? '/images/icons/jelantik.webp' : '/images/icons/jakinet.png';
   const brandSupportText = isJelantik ? 'Pesan dari Jelantik akan muncul di sini' : 'Pesan dari Jakinet akan muncul di sini';
   const brandWhatsapp = isJelantik ? 'https://wa.me/6282223616884' : 'https://wa.me/6281188809633';
+
+  // Tickets & Laporan Gangguan (Read-only from JPO Admin API)
+  const tickets = customerData?.tickets || [];
+  const activeTickets = tickets.filter((t) => {
+    const s = (t.status || '').toLowerCase();
+    return s !== 'selesai' && s !== 'closed' && s !== 'done' && s !== 'resolved';
+  });
+
+  const getTicketStatusBadge = (status: string) => {
+    const s = (status || '').toLowerCase();
+    if (s === 'selesai' || s === 'closed' || s === 'done' || s === 'resolved') {
+      return { label: 'Selesai', className: 'portal-ticket-badge--green' };
+    }
+    if (s === 'diproses' || s === 'in progress' || s === 'proses' || s === 'dalam penanganan') {
+      return { label: 'Dalam Penanganan', className: 'portal-ticket-badge--amber' };
+    }
+    if (s === 'open' || s === 'baru' || s === 'pending') {
+      return { label: 'Diproses Admin', className: 'portal-ticket-badge--blue' };
+    }
+    return { label: status || 'Aktif', className: 'portal-ticket-badge--blue' };
+  };
 
   const handleLogout = async () => {
     setLogoutLoading(true);
@@ -119,24 +140,43 @@ export default function PortalDashboardClient({ customerData }: Props) {
   const actualSubscriptionStatus = calculateSubscriptionStatus();
   const isActive = actualSubscriptionStatus.toLowerCase() === 'aktif';
 
-  // Find the nearest due date for mobile display (only active invoices)
-  const nextDueInvoice = activeInvoices
-    .filter((inv) => inv && inv.status_invoice !== 'Lunas')
-    .sort((a, b) => {
-      const aTime = a.tgl_jatuh_tempo ? new Date(a.tgl_jatuh_tempo).getTime() : 0;
-      const bTime = b.tgl_jatuh_tempo ? new Date(b.tgl_jatuh_tempo).getTime() : 0;
-      return aTime - bTime;
-    })[0];
+  // Find the nearest due date for unpaid invoices
+  const unpaidInvoices = activeInvoices.filter((inv) => inv && inv.status_invoice !== 'Lunas');
 
-  const nextDue = nextDueInvoice?.tgl_jatuh_tempo ? formatDateShort(nextDueInvoice.tgl_jatuh_tempo) : null;
+  const nextDueInvoice = unpaidInvoices.sort((a, b) => {
+    const aTime = a.tgl_jatuh_tempo ? new Date(a.tgl_jatuh_tempo).getTime() : 0;
+    const bTime = b.tgl_jatuh_tempo ? new Date(b.tgl_jatuh_tempo).getTime() : 0;
+    return aTime - bTime;
+  })[0];
+
+  // Find the latest invoice (paid or unpaid) for "Aktif hingga" calculation
+  const latestInvoice = activeInvoices.slice().sort((a, b) => {
+    const aTime = a.tgl_jatuh_tempo ? new Date(a.tgl_jatuh_tempo).getTime() : 0;
+    const bTime = b.tgl_jatuh_tempo ? new Date(b.tgl_jatuh_tempo).getTime() : 0;
+    return bTime - aTime;
+  })[0];
+
+  // Target date for "Aktif hingga" or "Jatuh Tempo"
+  const activeUntilDateStr = nextDueInvoice?.tgl_jatuh_tempo 
+    || latestInvoice?.tgl_jatuh_tempo 
+    || customerData?.langganan?.tanggal_mulai 
+    || null;
+
+  const activeUntilDate = activeUntilDateStr ? formatDateShort(activeUntilDateStr) : null;
 
   // Extract speed from layanan name
   const layananName = customerData?.pelanggan?.layanan || 'Internet 10 Mbps';
   const speedMatch = layananName.match(/(\d+)\s*Mbps/i);
   const speed = speedMatch ? speedMatch[1] : '10';
 
-  // Get customer ID display
-  const customerId = (customerData?.pelanggan?.id || '').toString().padStart(10, '0');
+  // Get customer ID display from table pelanggan on jpo.jelantik.com
+  const rawCustomerId = (customerData?.pelanggan as any)?.id_pelanggan 
+    || (customerData?.pelanggan as any)?.customer_id 
+    || (customerData?.pelanggan as any)?.no_pelanggan 
+    || customerData?.pelanggan?.id 
+    || '';
+
+  const customerId = rawCustomerId ? String(rawCustomerId) : '-';
 
   return (
     <div className={`portal-root theme-${brandKey}`}>
@@ -360,6 +400,187 @@ export default function PortalDashboardClient({ customerData }: Props) {
                   )}
                 </div>
               </div>
+
+              {/* TICKETS / LAPORAN GANGGUAN CARD */}
+              <div className="portal-ticket-card">
+                <div className="portal-ticket-header">
+                  <div>
+                    <div className="portal-ticket-title-group">
+                      <h3 className="portal-ticket-title">Status Laporan &amp; Tiket Gangguan</h3>
+                      {activeTickets.length > 0 && (
+                        <span className="portal-ticket-active-badge">
+                          {activeTickets.length} Aktif
+                        </span>
+                      )}
+                    </div>
+                    <p className="portal-ticket-desc">
+                      Status penanganan gangguan oleh Tim Support Admin JPO (Read-Only).
+                    </p>
+                  </div>
+                </div>
+
+                {tickets.length === 0 ? (
+                  <div className="portal-ticket-empty">
+                    <div className="portal-ticket-empty-icon">
+                      <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <p className="portal-ticket-empty-title">Tidak ada laporan gangguan aktif saat ini.</p>
+                    <p className="portal-ticket-empty-sub">Layanan internet Anda berjalan normal.</p>
+                  </div>
+                ) : (
+                  <div>
+                    {tickets.map((ticket) => {
+                      const badge = getTicketStatusBadge(ticket.status);
+                      const ticketNum = ticket.ticket_number || ticket.no_tiket || ticket.ticket_no || ticket.number || `#TCK-${ticket.id}`;
+                      const title = ticket.title || ticket.judul || ticket.subject || ticket.kategori || ticket.category || 'Laporan Gangguan';
+                      const desc = ticket.description || ticket.deskripsi || ticket.pesan || '-';
+                      const category = ticket.kategori || ticket.category;
+                      const solution = ticket.solution || ticket.solusi || ticket.tanggapan;
+                      const dateVal = ticket.created || ticket.tgl_laporan || ticket.created_at;
+                      const statusLower = (ticket.status || '').toLowerCase();
+                      const rawActions = ticket.actions || ticket.action_history || ticket.action_taken_history || ticket.history || ticket.status_history || ticket.logs || [];
+
+                      return (
+                        <div key={ticket.id} className="portal-ticket-item">
+                          <div className="portal-ticket-item-top">
+                            <div className="portal-ticket-item-left">
+                              <div className="portal-ticket-item-icon">
+                                <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <div>
+                                  <span className="portal-ticket-item-num">{ticketNum}</span>
+                                  {category && (
+                                    <span className="portal-ticket-item-cat">
+                                      {category}
+                                    </span>
+                                  )}
+                                </div>
+                                <h4 className="portal-ticket-item-title">{title}</h4>
+                              </div>
+                            </div>
+                            <span className={`portal-ticket-badge ${badge.className}`}>
+                              {badge.label}
+                            </span>
+                          </div>
+
+                          <div className="portal-ticket-item-body">
+                            <p style={{ margin: 0, fontWeight: 500 }}>{desc}</p>
+                            {solution && (
+                              <div className="portal-ticket-item-solution">
+                                <p className="portal-ticket-item-solution-title">
+                                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  Solusi / Penanganan Tim Admin:
+                                </p>
+                                <p className="portal-ticket-item-solution-text">{solution}</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* ACTION TAKEN & PROGRESS HISTORY TIMELINE */}
+                          <div className="pm-ticket-timeline">
+                            <div className="pm-ticket-timeline-title">
+                              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span>Lacak Penanganan (Track Action History)</span>
+                            </div>
+
+                            <div className="pm-ticket-timeline-list">
+                              {/* Step 1: Open */}
+                              <div className="pm-timeline-item">
+                                <div className="pm-timeline-dot pm-timeline-dot--active"></div>
+                                <div className="pm-timeline-content">
+                                  <div className="pm-timeline-header">
+                                    <span className="pm-timeline-badge pm-timeline-badge--blue">OPEN</span>
+                                    <span className="pm-timeline-time">{formatDate(dateVal)}</span>
+                                  </div>
+                                  <p className="pm-timeline-actor"><strong>System / Admin JPO</strong></p>
+                                  <div className="pm-timeline-notes">
+                                    Laporan gangguan tercatat &amp; masuk antrean penanganan Tim JPO.
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Step 2: UNDER MAINTENANCE (Perbaikan/Pemeliharaan Teknis) */}
+                              <div className="pm-timeline-item">
+                                <div className="pm-timeline-dot pm-timeline-dot--active"></div>
+                                <div className="pm-timeline-content">
+                                  <div className="pm-timeline-header">
+                                    <span className="pm-timeline-badge pm-timeline-badge--amber">UNDER MAINTENANCE</span>
+                                    <span className="pm-timeline-time">Perbaikan &amp; Pemeliharaan</span>
+                                  </div>
+                                  <p className="pm-timeline-actor"><strong>Tim Support &amp; Teknisi Lapangan</strong></p>
+                                  <div className="pm-timeline-notes">
+                                    {rawActions.length > 0
+                                      ? (rawActions[0].notes || rawActions[0].note || rawActions[0].description || 'Pengecekan jaringan & perbaikan fisik/ODP dilakukan.')
+                                      : (solution ? solution : 'Pengecekan jaringan & perbaikan fisik/ODP sedang/telah dilakukan oleh teknisi.')}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Additional logged actions from Admin/Teknisi if available */}
+                              {rawActions.length > 1 && rawActions.slice(1).map((act: any, idx: number) => {
+                                const actType = act.action_type || act.type || act.action || 'ACTION TAKEN';
+                                const actNotes = act.notes || act.note || act.description || act.pesan || '-';
+                                const actUser = typeof act.user === 'object' ? (act.user.nama || act.user.name) : (act.user || act.by || act.actor || act.user_name || 'Admin / Teknisi');
+                                const actRole = act.role || (typeof act.user === 'object' ? act.user.role : '') || 'Technician';
+                                const actDate = act.created_at || act.date || act.tgl || dateVal;
+
+                                return (
+                                  <div key={idx} className="pm-timeline-item">
+                                    <div className="pm-timeline-dot pm-timeline-dot--active"></div>
+                                    <div className="pm-timeline-content">
+                                      <div className="pm-timeline-header">
+                                        <span className="pm-timeline-badge pm-timeline-badge--amber">{actType}</span>
+                                        <span className="pm-timeline-time">{formatDate(actDate)}</span>
+                                      </div>
+                                      <p className="pm-timeline-actor">
+                                        <strong>{actUser}</strong> {actRole ? `(${actRole})` : ''}
+                                      </p>
+                                      <div className="pm-timeline-notes">
+                                        <span>Catatan:</span> {actNotes}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+
+                              {/* Step 3: CLOSED (Selesai & Ditutup) */}
+                              {(statusLower.includes('closed') || statusLower.includes('selesai') || statusLower.includes('resolved')) && (
+                                <div className="pm-timeline-item">
+                                  <div className="pm-timeline-dot pm-timeline-dot--green"></div>
+                                  <div className="pm-timeline-content">
+                                    <div className="pm-timeline-header">
+                                      <span className="pm-timeline-badge pm-timeline-badge--green">CLOSED</span>
+                                      <span className="pm-timeline-time">Selesai &amp; Ditutup</span>
+                                    </div>
+                                    <p className="pm-timeline-actor"><strong>Tim Technical Support Admin JPO</strong></p>
+                                    <div className="pm-timeline-notes">
+                                      {solution ? `Solusi Akhir: ${solution}` : 'Penanganan gangguan telah selesai & ditutup. Akses internet kembali lancar.'}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="portal-ticket-item-footer" style={{ marginTop: '0.75rem' }}>
+                            <span>Tanggal Laporan: {formatDate(dateVal)}</span>
+                            <span>Dikelola via JPO Admin</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* RIGHT: PROFILE */}
@@ -492,22 +713,22 @@ export default function PortalDashboardClient({ customerData }: Props) {
               <div className="pm-status-row">
                 {/* Billing Status Card */}
                 <div className={`pm-status-card ${isActive ? 'pm-status-card--active' : 'pm-status-card--suspended'}`}>
-                  <span className="pm-status-card-label">{isActive ? 'Tagihan Lunas' : 'Tunggakan'}</span>
-                  <span className={`pm-status-card-badge ${isActive ? 'pm-status-card-badge--green' : 'pm-status-card-badge--red'}`}>
-                    {isActive ? 'Aktif hingga' : 'Jatuh Tempo'}
+                  <span className="pm-status-card-label">{unpaidCount > 0 ? 'Tunggakan' : 'Tagihan Lunas'}</span>
+                  <span className={`pm-status-card-badge ${unpaidCount > 0 ? 'pm-status-card-badge--red' : 'pm-status-card-badge--green'}`}>
+                    {unpaidCount > 0 ? 'Jatuh Tempo' : 'Aktif hingga'}
                   </span>
-                  {nextDue ? (
+                  {activeUntilDate ? (
                     <div className="pm-status-card-date">
-                      <span className="pm-status-card-day">{nextDue.day}</span>
-                      <span className="pm-status-card-month">{nextDue.month}</span>
-                      <span className="pm-status-card-year">{nextDue.year}</span>
+                      <span className="pm-status-card-day">{activeUntilDate.day}</span>
+                      <span className="pm-status-card-month">{activeUntilDate.month}</span>
+                      <span className="pm-status-card-year">{activeUntilDate.year}</span>
                     </div>
                   ) : (
                     <div className="pm-status-card-date">
-                      <span className="pm-status-card-month" style={{ fontSize: '0.875rem' }}>Tidak ada tagihan</span>
+                      <span className="pm-status-card-month" style={{ fontSize: '0.875rem' }}>-</span>
                     </div>
                   )}
-                  {nextDueInvoice && (
+                  {nextDueInvoice && unpaidCount > 0 && (
                     <span className="pm-status-card-next">
                       Tagihan selanjutnya {formatDate(nextDueInvoice.tgl_jatuh_tempo)}
                     </span>
@@ -521,7 +742,6 @@ export default function PortalDashboardClient({ customerData }: Props) {
                     <span className="pm-speed-number">{speed}</span>
                     <span className="pm-speed-unit">Mbps</span>
                   </div>
-                  <span className="pm-speed-card-ont">ONT : {customerData?.pelanggan?.id_brand || 'N/A'}</span>
                 </div>
               </div>
 
@@ -665,6 +885,169 @@ export default function PortalDashboardClient({ customerData }: Props) {
             </div>
           )}
 
+          {/* ===== TIKET TAB ===== */}
+          {mobileTab === 'tiket' && (
+            <div className="pm-ticket-container">
+              <div className="pm-ticket-header">
+                <h3 className="pm-ticket-title">Laporan Gangguan</h3>
+                {/* <span className="pm-ticket-readonly-badge">
+                  Read-Only JPO
+                </span> */}
+              </div>
+              
+              <div className="pm-ticket-banner">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="pm-ticket-banner-icon">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="pm-ticket-banner-text">
+                  Status laporan gangguan dikoordinasikan &amp; diproses langsung oleh Tim Technical Support Admin JPO.
+                </p>
+              </div>
+
+              {tickets.length === 0 ? (
+                <div className="pm-ticket-empty">
+                  <div className="pm-ticket-empty-icon">
+                    <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <p className="pm-ticket-empty-title">Tidak ada gangguan aktif</p>
+                  <p className="pm-ticket-empty-sub">Layanan internet Anda berjalan lancar.</p>
+                </div>
+              ) : (
+                <div className="pm-ticket-list">
+                  {tickets.map((ticket) => {
+                    const badge = getTicketStatusBadge(ticket.status);
+                    const ticketNum = ticket.ticket_number || ticket.no_tiket || ticket.ticket_no || ticket.number || `#TCK-${ticket.id}`;
+                    const title = ticket.title || ticket.judul || ticket.subject || ticket.kategori || ticket.category || 'Laporan Gangguan';
+                    const desc = ticket.description || ticket.deskripsi || ticket.pesan || '-';
+                    const solution = ticket.solution || ticket.solusi || ticket.tanggapan;
+                    const dateVal = ticket.created || ticket.tgl_laporan || ticket.created_at;
+                    const statusLower = (ticket.status || '').toLowerCase();
+                    const rawActions = ticket.actions || ticket.action_history || ticket.action_taken_history || ticket.history || ticket.status_history || ticket.logs || [];
+
+                    return (
+                      <div key={ticket.id} className="pm-ticket-card">
+                        <div className="pm-ticket-card-header">
+                          <div>
+                            <span className="pm-ticket-num">{ticketNum}</span>
+                            <h4 className="pm-ticket-subject">{title}</h4>
+                          </div>
+                          <span className={`portal-ticket-badge ${badge.className}`}>
+                            {badge.label}
+                          </span>
+                        </div>
+
+                        <div className="pm-ticket-desc-box">
+                          <p style={{ margin: 0, fontWeight: 500 }}>{desc}</p>
+                          {solution && (
+                            <div className="pm-ticket-solution-box">
+                              <p className="pm-ticket-solution-title">Solusi / Penanganan Tim Admin:</p>
+                              <p className="pm-ticket-solution-text">{solution}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* ACTION TAKEN & PROGRESS HISTORY TIMELINE */}
+                        <div className="pm-ticket-timeline">
+                          <div className="pm-ticket-timeline-title">
+                            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Lacak Penanganan (Track Action History)</span>
+                          </div>
+
+                          <div className="pm-ticket-timeline-list">
+                            {/* Step 1: Open */}
+                            <div className="pm-timeline-item">
+                              <div className="pm-timeline-dot pm-timeline-dot--active"></div>
+                              <div className="pm-timeline-content">
+                                <div className="pm-timeline-header">
+                                  <span className="pm-timeline-badge pm-timeline-badge--blue">OPEN</span>
+                                  <span className="pm-timeline-time">{formatDate(dateVal)}</span>
+                                </div>
+                                <p className="pm-timeline-actor"><strong>System / Admin JPO</strong></p>
+                                <div className="pm-timeline-notes">
+                                  Laporan gangguan tercatat &amp; masuk antrean penanganan Tim JPO.
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Step 2: UNDER MAINTENANCE (Perbaikan/Pemeliharaan Teknis) */}
+                            <div className="pm-timeline-item">
+                              <div className="pm-timeline-dot pm-timeline-dot--active"></div>
+                              <div className="pm-timeline-content">
+                                <div className="pm-timeline-header">
+                                  <span className="pm-timeline-badge pm-timeline-badge--amber">UNDER MAINTENANCE</span>
+                                  <span className="pm-timeline-time">Perbaikan &amp; Pemeliharaan</span>
+                                </div>
+                                <p className="pm-timeline-actor"><strong>Tim Support &amp; Teknisi Lapangan</strong></p>
+                                <div className="pm-timeline-notes">
+                                  {rawActions.length > 0
+                                    ? (rawActions[0].notes || rawActions[0].note || rawActions[0].description || 'Pengecekan jaringan & perbaikan fisik/ODP dilakukan.')
+                                    : (solution ? solution : 'Pengecekan jaringan & perbaikan fisik/ODP sedang/telah dilakukan oleh teknisi.')}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Additional logged actions from Admin/Teknisi if available */}
+                            {rawActions.length > 1 && rawActions.slice(1).map((act: any, idx: number) => {
+                              const actType = act.action_type || act.type || act.action || 'ACTION TAKEN';
+                              const actNotes = act.notes || act.note || act.description || act.pesan || '-';
+                              const actUser = typeof act.user === 'object' ? (act.user.nama || act.user.name) : (act.user || act.by || act.actor || act.user_name || 'Admin / Teknisi');
+                              const actRole = act.role || (typeof act.user === 'object' ? act.user.role : '') || 'Technician';
+                              const actDate = act.created_at || act.date || act.tgl || dateVal;
+
+                              return (
+                                <div key={idx} className="pm-timeline-item">
+                                  <div className="pm-timeline-dot pm-timeline-dot--active"></div>
+                                  <div className="pm-timeline-content">
+                                    <div className="pm-timeline-header">
+                                      <span className="pm-timeline-badge pm-timeline-badge--amber">{actType}</span>
+                                      <span className="pm-timeline-time">{formatDate(actDate)}</span>
+                                    </div>
+                                    <p className="pm-timeline-actor">
+                                      <strong>{actUser}</strong> {actRole ? `(${actRole})` : ''}
+                                    </p>
+                                    <div className="pm-timeline-notes">
+                                      <span>Catatan:</span> {actNotes}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                            {/* Step 3: CLOSED (Selesai & Ditutup) */}
+                            {(statusLower.includes('closed') || statusLower.includes('selesai') || statusLower.includes('resolved')) && (
+                              <div className="pm-timeline-item">
+                                <div className="pm-timeline-dot pm-timeline-dot--green"></div>
+                                <div className="pm-timeline-content">
+                                  <div className="pm-timeline-header">
+                                    <span className="pm-timeline-badge pm-timeline-badge--green">CLOSED</span>
+                                    <span className="pm-timeline-time">Selesai &amp; Ditutup</span>
+                                  </div>
+                                  <p className="pm-timeline-actor"><strong>Tim Technical Support Admin JPO</strong></p>
+                                  <div className="pm-timeline-notes">
+                                    {solution ? `Solusi Akhir: ${solution}` : 'Penanganan gangguan telah selesai & ditutup. Akses internet kembali lancar.'}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="pm-ticket-footer" style={{ marginTop: '0.75rem' }}>
+                          <span>Tanggal Lapor: {formatDate(dateVal)}</span>
+                          <span>Dikelola via JPO Admin</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ===== PESAN TAB ===== */}
           {mobileTab === 'pesan' && (
             <div className="pm-pesan">
@@ -796,6 +1179,20 @@ export default function PortalDashboardClient({ customerData }: Props) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={mobileTab === 'history' ? 2.5 : 1.8} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span>History</span>
+          </button>
+          <button
+            className={`pm-nav-item ${mobileTab === 'tiket' ? 'pm-nav-item--active' : ''}`}
+            onClick={() => setMobileTab('tiket')}
+          >
+            <div className="relative inline-block">
+              <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={mobileTab === 'tiket' ? 2.5 : 1.8} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+              </svg>
+              {activeTickets.length > 0 && (
+                <span className="absolute -top-1 -right-1.5 w-2 h-2 bg-amber-500 rounded-full animate-ping"></span>
+              )}
+            </div>
+            <span>Tiket</span>
           </button>
           <button
             className={`pm-nav-item ${mobileTab === 'pesan' ? 'pm-nav-item--active' : ''}`}
