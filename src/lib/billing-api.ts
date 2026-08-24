@@ -114,6 +114,23 @@ export interface CustomerData {
 }
 
 /**
+ * Helper: fetch with AbortSignal timeout to prevent DNS / network hanging
+ */
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 4000): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
  * Get admin access token for API calls
  */
 export async function getAdminToken(): Promise<string> {
@@ -124,66 +141,25 @@ export async function getAdminToken(): Promise<string> {
 }
 
 /**
- * Fetch tickets by customer ID with multiple endpoint candidates (trouble-tickets, tickets, etc.)
+ * Fetch tickets by customer ID with parallel fast lookup candidates (trouble-tickets, tickets, etc.)
  */
 export async function getTicketsByPelangganId(pelangganId: number, customerName?: string): Promise<Ticket[]> {
   try {
     const token = await getAdminToken();
     const timestamp = Date.now();
     
-    // Candidates endpoints used by JPO Admin portal
-    const endpoints = [
-      '/trouble-tickets',
-      '/trouble_tickets',
-      '/trouble-ticket',
-      '/tickets',
-      '/tiket',
-      '/laporan',
-      '/portal/tickets'
+    const primaryEndpoints = [
+      `/trouble-tickets?pelanggan_id=${pelangganId}&_t=${timestamp}`,
+      `/trouble-tickets?customer_id=${pelangganId}&_t=${timestamp}`,
+      `/portal/tickets?pelanggan_id=${pelangganId}&_t=${timestamp}`,
+      `/tickets?pelanggan_id=${pelangganId}&_t=${timestamp}`
     ];
+
     let rawTickets: any[] = [];
-    
-    for (const endpoint of endpoints) {
-      // Try querying with pelanggan_id, customer_id, and id_pelanggan
-      const paramKeys = ['pelanggan_id', 'customer_id', 'id_pelanggan'];
-      
-      for (const paramKey of paramKeys) {
-        const searchParams = new URLSearchParams({
-          [paramKey]: String(pelangganId),
-          _t: String(timestamp)
-        });
 
-        try {
-          const response = await fetch(`${API_URL}${endpoint}?${searchParams.toString()}`, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'X-API-Key': token,
-              'Content-Type': 'application/json',
-            },
-            cache: 'no-store',
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            const foundArray = extractArray(data);
-            if (foundArray.length > 0) {
-              rawTickets = foundArray;
-              break;
-            }
-          }
-        } catch (e) {
-          // continue to next endpoint if fetch fails
-        }
-      }
-      
-      if (rawTickets.length > 0) break;
-    }
-
-    // Fallback: search all tickets if direct lookup returned empty
-    if (rawTickets.length === 0) {
-      try {
-        const response = await fetch(`${API_URL}/trouble-tickets?limit=200&_t=${timestamp}`, {
+    const results = await Promise.allSettled(
+      primaryEndpoints.map(url =>
+        fetchWithTimeout(`${API_URL}${url}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -191,13 +167,20 @@ export async function getTicketsByPelangganId(pelangganId: number, customerName?
             'Content-Type': 'application/json',
           },
           cache: 'no-store',
-        });
-        if (response.ok) {
-          const data = await response.json();
-          rawTickets = extractArray(data);
-        }
-      } catch (e) {
-        // quiet fallback
+        }, 3500)
+      )
+    );
+
+    for (const res of results) {
+      if (res.status === 'fulfilled' && res.value.ok) {
+        try {
+          const data = await res.value.json();
+          const foundArray = extractArray(data);
+          if (foundArray.length > 0) {
+            rawTickets = foundArray;
+            break;
+          }
+        } catch (e) {}
       }
     }
 
@@ -239,7 +222,7 @@ export async function getCustomerDirectLookup(identifier: string): Promise<Custo
   try {
     const token = await getAdminToken();
 
-    const response = await fetch(`${API_URL}/portal/customer/lookup?identifier=${encodeURIComponent(identifier)}`, {
+    const response = await fetchWithTimeout(`${API_URL}/portal/customer/lookup?identifier=${encodeURIComponent(identifier)}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -247,7 +230,7 @@ export async function getCustomerDirectLookup(identifier: string): Promise<Custo
         'Content-Type': 'application/json',
       },
       cache: 'no-store',
-    });
+    }, 4000);
 
     if (!response.ok) {
       return null;
@@ -257,7 +240,7 @@ export async function getCustomerDirectLookup(identifier: string): Promise<Custo
     if (result && result.data && result.data.pelanggan) {
       const pelangganId = result.data.pelanggan.id;
       const customerName = result.data.pelanggan.nama;
-      const tickets = (result.data.tickets && result.data.tickets.length > 0) 
+      const tickets = (result.data.tickets && Array.isArray(result.data.tickets) && result.data.tickets.length > 0) 
         ? result.data.tickets 
         : await getTicketsByPelangganId(pelangganId, customerName);
       
@@ -281,7 +264,7 @@ export async function getCustomerDirectLookup(identifier: string): Promise<Custo
 async function searchPelanggan(query: string): Promise<Pelanggan[]> {
   const token = await getAdminToken();
 
-  const response = await fetch(`${API_URL}/pelanggan?search=${encodeURIComponent(query)}`, {
+  const response = await fetchWithTimeout(`${API_URL}/pelanggan?search=${encodeURIComponent(query)}`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -289,7 +272,7 @@ async function searchPelanggan(query: string): Promise<Pelanggan[]> {
       'Content-Type': 'application/json',
     },
     cache: 'no-store',
-  });
+  }, 4000);
 
   if (!response.ok) {
     return [];
@@ -398,7 +381,7 @@ export async function getLanggananByPelangganId(pelangganId: number): Promise<La
     const token = await getAdminToken();
 
     const timestamp = Date.now();
-    const response = await fetch(`${API_URL}/langganan?pelanggan_id=${pelangganId}&_t=${timestamp}`, {
+    const response = await fetchWithTimeout(`${API_URL}/langganan?pelanggan_id=${pelangganId}&_t=${timestamp}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -406,7 +389,7 @@ export async function getLanggananByPelangganId(pelangganId: number): Promise<La
         'Content-Type': 'application/json',
       },
       cache: 'no-store',
-    });
+    }, 4000);
 
     if (!response.ok) {
       console.error('API Response not OK:', response.status, response.statusText);
@@ -437,34 +420,26 @@ export async function getInvoicesByPelangganId(pelangganId: number, customerName
     const token = await getAdminToken();
     const timestamp = Date.now();
     
-    const endpoints = ['/invoices'];
+    const searchParams = new URLSearchParams({
+      pelanggan_id: String(pelangganId),
+      limit: '100',
+      _t: String(timestamp)
+    });
+
+    const response = await fetchWithTimeout(`${API_URL}/invoices?${searchParams.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'X-API-Key': token,
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store',
+    }, 4000);
+
     let rawInvoices: any[] = [];
-    
-    for (const endpoint of endpoints) {
-      const searchParams = new URLSearchParams({
-        pelanggan_id: String(pelangganId),
-        limit: '100',
-        _t: String(timestamp)
-      });
-
-      const response = await fetch(`${API_URL}${endpoint}?${searchParams.toString()}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-API-Key': token,
-          'Content-Type': 'application/json',
-        },
-        cache: 'no-store',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const foundArray = extractArray(data);
-        if (foundArray.length > 0) {
-          rawInvoices = foundArray;
-          break;
-        }
-      }
+    if (response.ok) {
+      const data = await response.json();
+      rawInvoices = extractArray(data);
     }
 
     function extractArray(data: any): any[] {
