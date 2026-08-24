@@ -116,7 +116,7 @@ export interface CustomerData {
 /**
  * Helper: fetch with AbortSignal timeout to prevent DNS / network hanging
  */
-async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 4000): Promise<Response> {
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 12000): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -125,6 +125,15 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
       signal: controller.signal,
     });
     return response;
+  } catch (err: any) {
+    if (err.name === 'AbortError' || err.code === 20) {
+      console.warn(`[API Timeout] Request to ${url} timed out after ${timeoutMs}ms`);
+      return new Response(JSON.stringify({ error: 'Request timeout' }), {
+        status: 408,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    throw err;
   } finally {
     clearTimeout(timeoutId);
   }
