@@ -261,3 +261,42 @@
 .portal-ticket-item-solution-title { font-size: 0.8125rem; font-weight: 800; color: #0284c7; margin: 0 0 0.375rem; display: flex; align-items: center; gap: 0.375rem; }
 .portal-ticket-item-solution-text { font-size: 0.8125rem; font-weight: 600; color: #0c4a6e; margin: 0; }
 .portal-ticket-item-footer { display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: #94a3b8; margin-top: 0.25rem; font-weight: 500; }
+
+/* === PAYMENT GUIDE MODAL === */
+.portal-modal-backdrop {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 200;
+  background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+  animation: portalFadeIn 0.25s ease;
+}
+.portal-modal-card {
+  background: #ffffff; width: 100%; max-width: 520px; border-radius: 1.5rem;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18); border: 1px solid #e2e8f0;
+  padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;
+  max-height: 90vh; overflow-y: auto;
+}
+.portal-modal-header { display: flex; align-items: center; justify-content: space-between; }
+.portal-modal-header-title { display: flex; align-items: center; gap: 0.5rem; }
+.portal-modal-header-title h3 { font-size: 1.125rem; font-weight: 800; color: #0f172a; margin: 0; }
+.portal-modal-close { background: #f1f5f9; border: none; border-radius: 0.5rem; width: 2rem; height: 2rem; display: flex; align-items: center; justify-content: center; color: #64748b; cursor: pointer; transition: all 0.2s; }
+.portal-modal-close:hover { background: #e2e8f0; color: #0f172a; }
+.portal-modal-desc { font-size: 0.8125rem; color: #64748b; margin: -0.5rem 0 0; font-weight: 500; }
+
+.portal-modal-tabs { display: flex; gap: 0.375rem; background: #f8fafc; padding: 0.25rem; border-radius: 0.75rem; border: 1px solid #f1f5f9; }
+.portal-modal-tab { flex: 1; padding: 0.5rem 0.25rem; font-size: 0.75rem; font-weight: 700; color: #64748b; background: none; border: none; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; text-align: center; }
+.portal-modal-tab--active { background: #ffffff; color: #2563eb; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+
+.portal-guide-steps { display: flex; flex-direction: column; gap: 0.875rem; margin-top: 0.5rem; }
+.portal-guide-step { display: flex; align-items: flex-start; gap: 0.75rem; background: #f8fafc; padding: 0.875rem; border-radius: 0.875rem; border: 1px solid #f1f5f9; }
+.portal-guide-num { width: 1.5rem; height: 1.5rem; border-radius: 50%; background: #dbeafe; color: #1d4ed8; font-size: 0.75rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+.portal-guide-step strong { display: block; font-size: 0.84375rem; color: #0f172a; font-weight: 700; margin-bottom: 0.125rem; }
+.portal-guide-step p { font-size: 0.78125rem; color: #475569; margin: 0; line-height: 1.4; font-weight: 500; }
+
+.portal-modal-note { background: #eff6ff; border: 1px solid #dbeafe; border-radius: 0.75rem; padding: 0.75rem 0.875rem; display: flex; align-items: flex-start; gap: 0.5rem; margin-top: 0.75rem; }
+.portal-modal-note p { font-size: 0.75rem; color: #1e40af; font-weight: 500; margin: 0; line-height: 1.4; }
+
+.portal-modal-footer { display: flex; align-items: center; justify-content: flex-end; gap: 0.625rem; margin-top: 0.5rem; }
+.portal-modal-btn-support { font-size: 0.78125rem; font-weight: 700; color: #2563eb; background: #eff6ff; border: 1px solid #dbeafe; padding: 0.625rem 1rem; border-radius: 0.75rem; text-decoration: none; transition: all 0.2s; }
+.portal-modal-btn-support:hover { background: #dbeafe; }
+.portal-modal-btn-close { font-size: 0.78125rem; font-weight: 700; color: #475569; background: #f1f5f9; border: 1px solid #e2e8f0; padding: 0.625rem 1.25rem; border-radius: 0.75rem; cursor: pointer; transition: all 0.2s; }
+.portal-modal-btn-close:hover { background: #e2e8f0; }

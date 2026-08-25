@@ -14,6 +14,8 @@ export default function PortalDashboardClient({ customerData }: Props) {
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [invoiceFilter, setInvoiceFilter] = useState<'all' | 'unpaid' | 'paid'>('all');
   const [mobileTab, setMobileTab] = useState<'home' | 'history' | 'tiket' | 'pesan' | 'settings'>('home');
+  const [showPaymentGuide, setShowPaymentGuide] = useState(false);
+  const [guideTab, setGuideTab] = useState<'va' | 'qris' | 'retail'>('va');
 
   const brandName = customerData?.pelanggan?.harga_layanan?.brand?.toUpperCase() || '';
   const brandId = customerData?.pelanggan?.id_brand?.toLowerCase() || '';
@@ -206,6 +208,16 @@ export default function PortalDashboardClient({ customerData }: Props) {
 
               {/* Actions */}
               <div className="portal-header-right">
+                <button
+                  onClick={() => setShowPaymentGuide(true)}
+                  className="portal-header-link"
+                  style={{ background: '#f8fafc', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.5rem 0.875rem', borderRadius: '0.75rem', color: '#334155', fontWeight: 600, fontSize: '0.8125rem' }}
+                >
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#2563eb' }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  <span>Cara Bayar</span>
+                </button>
                 <div className="portal-header-divider"></div>
                 <button
                   onClick={handleLogout}
@@ -774,6 +786,14 @@ export default function PortalDashboardClient({ customerData }: Props) {
                   </div>
                   <span className="pm-quick-action-label">Pembayaran</span>
                 </a>
+                <button onClick={() => setShowPaymentGuide(true)} className="pm-quick-action" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                  <div className="pm-quick-action-icon">
+                    <svg width="26" height="26" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                  </div>
+                  <span className="pm-quick-action-label">Cara Bayar</span>
+                </button>
                 <a href={brandWhatsapp} target="_blank" rel="noopener noreferrer" className="pm-quick-action">
                   <div className="pm-quick-action-icon">
                     <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -782,7 +802,6 @@ export default function PortalDashboardClient({ customerData }: Props) {
                   </div>
                   <span className="pm-quick-action-label">Customer Support</span>
                 </a>
-                
               </div>
 
               {/* Recent Payments Section */}
@@ -1215,6 +1234,159 @@ export default function PortalDashboardClient({ customerData }: Props) {
           </button>
         </nav>
       </div>
+
+      {/* ==================== PETUNJUK PEMBAYARAN XENDIT MODAL ==================== */}
+      {showPaymentGuide && (
+        <div className="portal-modal-backdrop" onClick={() => setShowPaymentGuide(false)}>
+          <div className="portal-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="portal-modal-header">
+              <div className="portal-modal-header-title">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#2563eb' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                <h3>Petunjuk Pembayaran Xendit</h3>
+              </div>
+              <button className="portal-modal-close" onClick={() => setShowPaymentGuide(false)} aria-label="Tutup">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <p className="portal-modal-desc">
+              Panduan langkah pembayaran tagihan otomatis via Xendit Payment Gateway.
+            </p>
+
+            {/* Tabs */}
+            <div className="portal-modal-tabs">
+              <button
+                onClick={() => setGuideTab('va')}
+                className={`portal-modal-tab ${guideTab === 'va' ? 'portal-modal-tab--active' : ''}`}
+              >
+                Virtual Account
+              </button>
+              <button
+                onClick={() => setGuideTab('qris')}
+                className={`portal-modal-tab ${guideTab === 'qris' ? 'portal-modal-tab--active' : ''}`}
+              >
+                QRIS &amp; E-Wallet
+              </button>
+              <button
+                onClick={() => setGuideTab('retail')}
+                className={`portal-modal-tab ${guideTab === 'retail' ? 'portal-modal-tab--active' : ''}`}
+              >
+                Gerai Retail
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="portal-modal-body">
+              {guideTab === 'va' && (
+                <div className="portal-guide-steps">
+                  <div className="portal-guide-step">
+                    <span className="portal-guide-num">1</span>
+                    <div>
+                      <strong>Buka Halaman Pembayaran Xendit</strong>
+                      <p>Klik tombol <b>Pembayaran</b> pada invoice tagihan Anda untuk membuka link resmi Xendit.</p>
+                    </div>
+                  </div>
+                  <div className="portal-guide-step">
+                    <span className="portal-guide-num">2</span>
+                    <div>
+                      <strong>Pilih Bank Pilihan Anda</strong>
+                      <p>Pilih Virtual Account bank Anda (BCA, Mandiri, BRI, BNI, Permata, dll) untuk memunculkan nomor Kode VA.</p>
+                    </div>
+                  </div>
+                  <div className="portal-guide-step">
+                    <span className="portal-guide-num">3</span>
+                    <div>
+                      <strong>Lakukan Transfer VA</strong>
+                      <p>Buka M-Banking / ATM Anda, pilih <b>Transfer ➔ Virtual Account</b>, tempelkan nomor VA &amp; bayar sesuai nominal.</p>
+                    </div>
+                  </div>
+                  <div className="portal-guide-step">
+                    <span className="portal-guide-num">4</span>
+                    <div>
+                      <strong>Verifikasi Otomatis</strong>
+                      <p>Setelah transfer selesai, sistem Xendit akan memverifikasi otomatis dalam hitungan detik tanpa perlu kirim bukti transfer.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {guideTab === 'qris' && (
+                <div className="portal-guide-steps">
+                  <div className="portal-guide-step">
+                    <span className="portal-guide-num">1</span>
+                    <div>
+                      <strong>Pilih QRIS / E-Wallet</strong>
+                      <p>Pada halaman pembayaran Xendit, pilih opsi <b>QRIS</b> atau E-Wallet (GoPay, ShopeePay, OVO, DANA).</p>
+                    </div>
+                  </div>
+                  <div className="portal-guide-step">
+                    <span className="portal-guide-num">2</span>
+                    <div>
+                      <strong>Pindai (Scan) Kode QRIS</strong>
+                      <p>Gunakan fitur Scan QRIS pada aplikasi M-Banking atau E-Wallet pilihan Anda.</p>
+                    </div>
+                  </div>
+                  <div className="portal-guide-step">
+                    <span className="portal-guide-num">3</span>
+                    <div>
+                      <strong>Selesaikan Transaksi</strong>
+                      <p>Konfirmasi nama &amp; nominal tagihan, lalu masukkan PIN E-Wallet Anda untuk menyelesaikan pembayaran.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {guideTab === 'retail' && (
+                <div className="portal-guide-steps">
+                  <div className="portal-guide-step">
+                    <span className="portal-guide-num">1</span>
+                    <div>
+                      <strong>Pilih Minimarket</strong>
+                      <p>Pada halaman Xendit, pilih metode pembayaran <b>Alfamart</b> atau <b>Indomaret</b> untuk mendapatkan Kode Pembayaran.</p>
+                    </div>
+                  </div>
+                  <div className="portal-guide-step">
+                    <span className="portal-guide-num">2</span>
+                    <div>
+                      <strong>Tunjukkan ke Kasir</strong>
+                      <p>Kunjungi gerai terdekat dan tunjukkan Kode Pembayaran Xendit kepada kasir.</p>
+                    </div>
+                  </div>
+                  <div className="portal-guide-step">
+                    <span className="portal-guide-num">3</span>
+                    <div>
+                      <strong>Bayar &amp; Simpan Struk</strong>
+                      <p>Bayar sesuai nominal ke kasir dan simpan struk fisik sebagai bukti transaksi resmi Anda.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="portal-modal-note">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#2563eb', flexShrink: 0, marginTop: '2px' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p>
+                  Seluruh transaksi Xendit diproses secara terenkripsi &amp; terverifikasi otomatis 24/7.
+                </p>
+              </div>
+            </div>
+
+            <div className="portal-modal-footer">
+              <a href={brandWhatsapp} target="_blank" rel="noopener noreferrer" className="portal-modal-btn-support">
+                Bantuan CS WhatsApp
+              </a>
+              <button onClick={() => setShowPaymentGuide(false)} className="portal-modal-btn-close">
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
