@@ -125,8 +125,8 @@ class CustomerProvider with ChangeNotifier {
   }
 
   String get customerId {
-    if (_customerData == null) return '0000000000';
-    return _customerData!.pelanggan.id.toString().padLeft(10, '0');
+    if (_customerData == null) return '-';
+    return _customerData!.pelanggan.id.toString();
   }
 
   String get subscriptionStatus {

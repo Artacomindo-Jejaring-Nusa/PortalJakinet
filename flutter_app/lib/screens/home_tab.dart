@@ -302,35 +302,54 @@ class HomeTab extends StatelessWidget {
                 onPressed: nextInvoice?.paymentLink != null
                     ? () => _openUrl(nextInvoice!.paymentLink!)
                     : null,
-                icon: const Icon(Icons.payment, color: Colors.white),
+                icon: const Icon(Icons.payment, color: Colors.white, size: 16),
                 label: const Text(
                   'Pembayaran',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
                   disabledBackgroundColor: Colors.grey.shade300,
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 6),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => _openUrl(provider.brandWhatsapp),
-                icon: Icon(Icons.support_agent, color: primaryColor),
+                onPressed: () => _showPaymentGuideModal(context, primaryColor, provider.brandWhatsapp),
+                icon: Icon(Icons.menu_book_rounded, color: primaryColor, size: 16),
                 label: Text(
-                  'CS Support',
-                  style: TextStyle(color: primaryColor),
+                  'Cara Bayar',
+                  style: TextStyle(color: primaryColor, fontSize: 11, fontWeight: FontWeight.bold),
                 ),
                 style: OutlinedButton.styleFrom(
                   side: BorderSide(color: primaryColor),
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _openUrl(provider.brandWhatsapp),
+                icon: Icon(Icons.support_agent, color: primaryColor, size: 16),
+                label: Text(
+                  'CS Support',
+                  style: TextStyle(color: primaryColor, fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: primaryColor),
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
@@ -498,6 +517,270 @@ class HomeTab extends StatelessWidget {
             );
           }),
       ],
+    );
+  }
+
+  void _showPaymentGuideModal(BuildContext context, Color primaryColor, String whatsappUrl) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DefaultTabController(
+          length: 3,
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.78,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Modal Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.menu_book_rounded, color: primaryColor, size: 22),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Petunjuk Pembayaran Xendit',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const Text(
+                  'Panduan langkah pembayaran tagihan otomatis via Xendit Payment Gateway.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 16),
+
+                // Tabs
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TabBar(
+                    indicator: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                    labelColor: primaryColor,
+                    unselectedLabelColor: Colors.grey,
+                    labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    tabs: const [
+                      Tab(text: 'Virtual Account'),
+                      Tab(text: 'QRIS & E-Wallet'),
+                      Tab(text: 'Gerai Retail'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Tab Contents
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      // Tab 1: Virtual Account
+                      ListView(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        children: const [
+                          _GuideStepItem(
+                            num: '1',
+                            title: 'Buka Halaman Pembayaran Xendit',
+                            desc: 'Klik tombol Pembayaran pada invoice tagihan Anda untuk membuka link resmi Xendit.',
+                          ),
+                          _GuideStepItem(
+                            num: '2',
+                            title: 'Pilih Bank Pilihan Anda',
+                            desc: 'Pilih Virtual Account bank Anda (BCA, Mandiri, BRI, BNI, Permata, dll) untuk memunculkan nomor Kode VA.',
+                          ),
+                          _GuideStepItem(
+                            num: '3',
+                            title: 'Lakukan Transfer VA',
+                            desc: 'Buka M-Banking / ATM Anda, pilih Transfer ➔ Virtual Account, tempelkan nomor VA & bayar sesuai nominal.',
+                          ),
+                          _GuideStepItem(
+                            num: '4',
+                            title: 'Verifikasi Otomatis',
+                            desc: 'Setelah transfer selesai, sistem Xendit akan memverifikasi otomatis dalam hitungan detik tanpa perlu kirim bukti transfer.',
+                          ),
+                        ],
+                      ),
+                      // Tab 2: QRIS & E-Wallet
+                      ListView(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        children: const [
+                          _GuideStepItem(
+                            num: '1',
+                            title: 'Pilih QRIS / E-Wallet',
+                            desc: 'Pada halaman pembayaran Xendit, pilih opsi QRIS atau E-Wallet (GoPay, ShopeePay, OVO, DANA).',
+                          ),
+                          _GuideStepItem(
+                            num: '2',
+                            title: 'Pindai (Scan) Kode QRIS',
+                            desc: 'Gunakan fitur Scan QRIS pada aplikasi M-Banking atau E-Wallet pilihan Anda.',
+                          ),
+                          _GuideStepItem(
+                            num: '3',
+                            title: 'Selesaikan Transaksi',
+                            desc: 'Konfirmasi nama & nominal tagihan, lalu masukkan PIN E-Wallet Anda untuk menyelesaikan pembayaran.',
+                          ),
+                        ],
+                      ),
+                      // Tab 3: Gerai Retail
+                      ListView(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        children: const [
+                          _GuideStepItem(
+                            num: '1',
+                            title: 'Pilih Minimarket',
+                            desc: 'Pada halaman Xendit, pilih metode pembayaran Alfamart atau Indomaret untuk mendapatkan Kode Pembayaran.',
+                          ),
+                          _GuideStepItem(
+                            num: '2',
+                            title: 'Tunjukkan ke Kasir',
+                            desc: 'Kunjungi gerai terdekat dan tunjukkan Kode Pembayaran Xendit kepada kasir.',
+                          ),
+                          _GuideStepItem(
+                            num: '3',
+                            title: 'Bayar & Simpan Struk',
+                            desc: 'Bayar sesuai nominal ke kasir dan simpan struk fisik sebagai bukti transaksi resmi Anda.',
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Note & Support Button
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFDBEAFE)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Color(0xFF1D4ED8), size: 18),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Seluruh transaksi Xendit diproses secara terenkripsi & terverifikasi otomatis 24/7.',
+                          style: TextStyle(fontSize: 11, color: Color(0xFF1E40AF)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openUrl(whatsappUrl),
+                    icon: const Icon(Icons.support_agent, size: 18),
+                    label: const Text('Bantuan CS WhatsApp'),
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _GuideStepItem extends StatelessWidget {
+  final String num;
+  final String title;
+  final String desc;
+
+  const _GuideStepItem({
+    required this.num,
+    required this.title,
+    required this.desc,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: const BoxDecoration(
+              color: Color(0xFFDBEAFE),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                num,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1D4ED8),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  desc,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.black54,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
