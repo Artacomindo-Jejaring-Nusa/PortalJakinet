@@ -1,6 +1,6 @@
 class AppConstants {
   static const String apiBaseUrl = 'https://jpo.jelantik.com/api/v1';
-  static const String apiKey = 'jk_live_b63c04911f09267c07786dd53b7ae7f5';
+  static const String apiKey = 'jk_live_40a2b032927400343ad2739e45771ef8';
   static const String apiUsername = '';
   static const String apiPassword = '';
 
