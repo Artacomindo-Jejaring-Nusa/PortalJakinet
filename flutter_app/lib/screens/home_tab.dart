@@ -566,28 +566,56 @@ class HomeTab extends StatelessWidget {
 
                 // Tabs
                 Container(
+                  height: 44,
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: TabBar(
+                    dividerColor: Colors.transparent,
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    labelPadding: EdgeInsets.zero,
                     indicator: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(9),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 4,
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
                     labelColor: primaryColor,
-                    unselectedLabelColor: Colors.grey,
-                    labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    unselectedLabelColor: const Color(0xFF64748B),
+                    labelStyle: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    unselectedLabelStyle: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                     tabs: const [
-                      Tab(text: 'Virtual Account'),
-                      Tab(text: 'QRIS & E-Wallet'),
-                      Tab(text: 'Gerai Retail'),
+                      Tab(
+                        height: 36,
+                        child: Center(
+                          child: Text('Bank VA', textAlign: TextAlign.center),
+                        ),
+                      ),
+                      Tab(
+                        height: 36,
+                        child: Center(
+                          child: Text('QRIS & E-Wallet', textAlign: TextAlign.center),
+                        ),
+                      ),
+                      Tab(
+                        height: 36,
+                        child: Center(
+                          child: Text('Gerai Retail', textAlign: TextAlign.center),
+                        ),
+                      ),
                     ],
                   ),
                 ),
