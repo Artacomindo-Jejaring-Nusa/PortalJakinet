@@ -8,6 +8,10 @@ const API_KEY = process.env.BILLING_API_KEY;
 
 export interface Pelanggan {
   id: number;
+  customer_id?: string;
+  id_customer?: string;
+  no_pelanggan?: string;
+  customer_no?: string;
   no_ktp: string;
   nama: string;
   alamat: string;

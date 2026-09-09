@@ -1,5 +1,6 @@
 class Pelanggan {
   final int id;
+  final String customerId;
   final String noKtp;
   final String nama;
   final String alamat;
@@ -17,6 +18,7 @@ class Pelanggan {
 
   Pelanggan({
     required this.id,
+    required this.customerId,
     required this.noKtp,
     required this.nama,
     required this.alamat,
@@ -36,6 +38,15 @@ class Pelanggan {
   factory Pelanggan.fromJson(Map<String, dynamic> json) {
     return Pelanggan(
       id: (json['id'] as num?)?.toInt() ?? 0,
+      customerId: (json['customer_id'] ??
+              json['id_customer'] ??
+              json['no_pelanggan'] ??
+              json['customer_no'] ??
+              json['id_pelanggan'] ??
+              json['code'] ??
+              json['id'] ??
+              '')
+          .toString(),
       noKtp: json['no_ktp'] ?? '',
       nama: json['nama'] ?? '',
       alamat: json['alamat'] ?? '',
@@ -58,6 +69,7 @@ class Pelanggan {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'customer_id': customerId,
       'no_ktp': noKtp,
       'nama': nama,
       'alamat': alamat,

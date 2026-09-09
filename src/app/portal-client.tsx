@@ -172,9 +172,11 @@ export default function PortalDashboardClient({ customerData }: Props) {
   const speed = speedMatch ? speedMatch[1] : '10';
 
   // Get customer ID display from table pelanggan on jpo.jelantik.com
-  const rawCustomerId = (customerData?.pelanggan as any)?.id_pelanggan 
-    || (customerData?.pelanggan as any)?.customer_id 
+  const rawCustomerId = (customerData?.pelanggan as any)?.customer_id 
+    || (customerData?.pelanggan as any)?.id_customer 
     || (customerData?.pelanggan as any)?.no_pelanggan 
+    || (customerData?.pelanggan as any)?.customer_no 
+    || (customerData?.pelanggan as any)?.id_pelanggan 
     || customerData?.pelanggan?.id 
     || '';
 
