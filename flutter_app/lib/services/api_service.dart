@@ -96,6 +96,60 @@ class ApiService {
     }
   }
 
+  // Direct Fast Customer Lookup by identifier (email, phone, customer ID)
+  Future<CustomerData?> getCustomerDirectLookup(String identifier) async {
+    try {
+      final token = await _getAdminToken();
+      final response = await http.get(
+        Uri.parse('${AppConstants.apiBaseUrl}/portal/customer/lookup?identifier=${Uri.encodeComponent(identifier)}'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'X-API-Key': token,
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode != 200) {
+        return null;
+      }
+
+      final result = json.decode(response.body);
+      if (result != null && result['data'] != null && result['data']['pelanggan'] != null) {
+        final pelanggan = Pelanggan.fromJson(result['data']['pelanggan']);
+        
+        Langganan? langganan;
+        if (result['data']['langganan'] != null) {
+          langganan = Langganan.fromJson(result['data']['langganan']);
+        }
+
+        List<Invoice> invoices = [];
+        if (result['data']['invoices'] != null && result['data']['invoices'] is List) {
+          invoices = (result['data']['invoices'] as List)
+              .map((inv) => Invoice.fromJson(inv))
+              .toList();
+        }
+
+        if (langganan == null || invoices.isEmpty) {
+          final related = await _fetchRelatedData(pelanggan);
+          langganan ??= related.langganan;
+          if (invoices.isEmpty) {
+            invoices = related.invoices;
+          }
+        }
+
+        return CustomerData(
+          pelanggan: pelanggan,
+          langganan: langganan,
+          invoices: invoices,
+        );
+      }
+      return null;
+    } catch (e) {
+      print('Error in getCustomerDirectLookup: $e');
+      return null;
+    }
+  }
+
   // Normalize phone number for standard comparison
   String _normalizePhone(String numStr) {
     var cleaned = numStr.replaceAll(RegExp(r'[-\s]'), '');
@@ -112,16 +166,22 @@ class ApiService {
   // Get Customer data by phone
   Future<CustomerData?> getCustomerByPhone(String phone) async {
     try {
-      var corePhone = phone.replaceAll(RegExp(r'[-\s]'), '');
-      if (corePhone.startsWith('+62')) {
-        corePhone = corePhone.substring(3);
-      } else if (corePhone.startsWith('62')) {
-        corePhone = corePhone.substring(2);
-      } else if (corePhone.startsWith('0')) {
-        corePhone = corePhone.substring(1);
+      // 1. Try search using full input phone (e.g. 08986937819)
+      var results = await _searchPelanggan(phone);
+
+      // 2. Fallback to core phone search (e.g. 8986937819)
+      if (results.isEmpty) {
+        var corePhone = phone.replaceAll(RegExp(r'[-\s]'), '');
+        if (corePhone.startsWith('+62')) {
+          corePhone = corePhone.substring(3);
+        } else if (corePhone.startsWith('62')) {
+          corePhone = corePhone.substring(2);
+        } else if (corePhone.startsWith('0')) {
+          corePhone = corePhone.substring(1);
+        }
+        results = await _searchPelanggan(corePhone);
       }
 
-      final results = await _searchPelanggan(corePhone);
       final targetNormalized = _normalizePhone(phone);
 
       final matched = results.firstWhere(
@@ -277,8 +337,15 @@ class ApiService {
     );
   }
 
-  // Validate Customer ID format
+  // Validate Customer credential (email, phone, customer ID, KTP)
   Future<CustomerData?> verifyCustomer(String identifier) async {
+    // 1. Try direct ultra-fast lookup first (matches phone, email, customer ID)
+    final directData = await getCustomerDirectLookup(identifier);
+    if (directData != null) {
+      return directData;
+    }
+
+    // 2. Fallback lookup by email or phone
     final isEmail = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(identifier);
     if (isEmail) {
       return getCustomerByEmail(identifier);
