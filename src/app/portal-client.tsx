@@ -69,16 +69,11 @@ export default function PortalDashboardClient({ customerData }: Props) {
     // Show unpaid invoice even if it is marked kadaluarsa/expired if it has a payment link
     const hasPaymentLink = !!invoice.payment_link && invoice.payment_link !== '#';
     if ((status === 'kadaluarsa' || status === 'expired') && !hasPaymentLink) return true;
-    
-    // Unpaid invoice whose due date has passed by more than 7 days → considered expired
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const dueDate = invoice.tgl_jatuh_tempo ? new Date(invoice.tgl_jatuh_tempo) : null;
-    if (!dueDate || isNaN(dueDate.getTime())) return false;
-    dueDate.setHours(0, 0, 0, 0);
-    const diffDays = (today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24);
-    return diffDays > 7;
+
+    // Unpaid/Belum Bayar/Jatuh Tempo invoices should ALWAYS be visible to customer until paid or cancelled
+    return false;
   };
+
 
   // Active invoices = non-expired
   const activeInvoices = (customerData?.invoices || []).filter((inv) => inv && !isExpiredInvoice(inv));
