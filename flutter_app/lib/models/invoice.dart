@@ -63,16 +63,19 @@ class Invoice {
 
   bool isExpired() {
     final status = statusInvoice.toLowerCase();
-    if (status == 'lunas') return false;
+    
+    // Explicitly hide any invoice marked as Expired, Kadaluarsa, or Batal
+    if (status.contains('expired') ||
+        status.contains('kadaluarsa') ||
+        status.contains('kadaluwarsa') ||
+        status.contains('batal') ||
+        status.contains('cancel')) {
+      return true;
+    }
 
-    // Show unpaid invoice even if marked kadaluarsa/expired if it has a payment link
-    final link = paymentLink;
-    final hasPaymentLink = link != null && link.isNotEmpty && link != '#';
-    if ((status == 'kadaluarsa' || status == 'expired') && !hasPaymentLink) return true;
-
-    // Unpaid/Belum Bayar/Jatuh Tempo invoices should ALWAYS be visible to customer until paid or cancelled
     return false;
   }
 }
+
 
 

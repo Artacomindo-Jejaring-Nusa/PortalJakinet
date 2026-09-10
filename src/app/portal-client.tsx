@@ -60,19 +60,25 @@ export default function PortalDashboardClient({ customerData }: Props) {
     }
   };
 
-  // Helper: check if an invoice is expired/kadaluarsa
+  // Helper: check if an invoice is expired/kadaluarsa/batal
   const isExpiredInvoice = (invoice: any) => {
     if (!invoice) return true;
-    const status = invoice.status_invoice?.toLowerCase() || '';
-    if (status === 'lunas') return false;
+    const status = (invoice.status_invoice || '').toLowerCase();
+    
+    // Explicitly hide any invoice marked as Expired, Kadaluarsa, or Batal
+    if (
+      status.includes('expired') ||
+      status.includes('kadaluarsa') ||
+      status.includes('kadaluwarsa') ||
+      status.includes('batal') ||
+      status.includes('cancel')
+    ) {
+      return true;
+    }
 
-    // Show unpaid invoice even if it is marked kadaluarsa/expired if it has a payment link
-    const hasPaymentLink = !!invoice.payment_link && invoice.payment_link !== '#';
-    if ((status === 'kadaluarsa' || status === 'expired') && !hasPaymentLink) return true;
-
-    // Unpaid/Belum Bayar/Jatuh Tempo invoices should ALWAYS be visible to customer until paid or cancelled
     return false;
   };
+
 
 
   // Active invoices = non-expired
