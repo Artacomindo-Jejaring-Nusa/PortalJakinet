@@ -524,220 +524,225 @@ class HomeTab extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
         return DefaultTabController(
           length: 3,
           child: Container(
-            height: MediaQuery.of(context).size.height * 0.78,
+            height: MediaQuery.of(context).size.height * 0.82,
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Modal Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+            child: SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Modal Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.menu_book_rounded, color: primaryColor, size: 22),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Petunjuk Pembayaran Xendit',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const Text(
+                    'Panduan langkah pembayaran tagihan otomatis via Xendit Payment Gateway.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Tabs
+                  Container(
+                    height: 44,
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TabBar(
+                      dividerColor: Colors.transparent,
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      labelPadding: EdgeInsets.zero,
+                      indicator: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(9),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      labelColor: primaryColor,
+                      unselectedLabelColor: const Color(0xFF64748B),
+                      labelStyle: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      unselectedLabelStyle: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      tabs: const [
+                        Tab(
+                          height: 36,
+                          child: Center(
+                            child: Text('Bank VA', textAlign: TextAlign.center),
+                          ),
+                        ),
+                        Tab(
+                          height: 36,
+                          child: Center(
+                            child: Text('QRIS & E-Wallet', textAlign: TextAlign.center),
+                          ),
+                        ),
+                        Tab(
+                          height: 36,
+                          child: Center(
+                            child: Text('Gerai Retail', textAlign: TextAlign.center),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Tab Contents
+                  Expanded(
+                    child: TabBarView(
                       children: [
-                        Icon(Icons.menu_book_rounded, color: primaryColor, size: 22),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Petunjuk Pembayaran Xendit',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        // Tab 1: Virtual Account
+                        ListView(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          children: const [
+                            _GuideStepItem(
+                              num: '1',
+                              title: 'Buka Halaman Pembayaran Xendit',
+                              desc: 'Klik tombol Pembayaran pada invoice tagihan Anda untuk membuka link resmi Xendit.',
+                            ),
+                            _GuideStepItem(
+                              num: '2',
+                              title: 'Pilih Bank Pilihan Anda',
+                              desc: 'Pilih Virtual Account bank Anda (BCA, Mandiri, BRI, BNI, Permata, dll) untuk memunculkan nomor Kode VA.',
+                            ),
+                            _GuideStepItem(
+                              num: '3',
+                              title: 'Lakukan Transfer VA',
+                              desc: 'Buka M-Banking / ATM Anda, pilih Transfer ➔ Virtual Account, tempelkan nomor VA & bayar sesuai nominal.',
+                            ),
+                            _GuideStepItem(
+                              num: '4',
+                              title: 'Verifikasi Otomatis',
+                              desc: 'Setelah transfer selesai, sistem Xendit akan memverifikasi otomatis dalam hitungan detik tanpa perlu kirim bukti transfer.',
+                            ),
+                          ],
+                        ),
+                        // Tab 2: QRIS & E-Wallet
+                        ListView(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          children: const [
+                            _GuideStepItem(
+                              num: '1',
+                              title: 'Pilih QRIS / E-Wallet',
+                              desc: 'Pada halaman pembayaran Xendit, pilih opsi QRIS atau E-Wallet (GoPay, ShopeePay, OVO, DANA).',
+                            ),
+                            _GuideStepItem(
+                              num: '2',
+                              title: 'Pindai (Scan) Kode QRIS',
+                              desc: 'Gunakan fitur Scan QRIS pada aplikasi M-Banking atau E-Wallet pilihan Anda.',
+                            ),
+                            _GuideStepItem(
+                              num: '3',
+                              title: 'Selesaikan Transaksi',
+                              desc: 'Konfirmasi nama & nominal tagihan, lalu masukkan PIN E-Wallet Anda untuk menyelesaikan pembayaran.',
+                            ),
+                          ],
+                        ),
+                        // Tab 3: Gerai Retail
+                        ListView(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          children: const [
+                            _GuideStepItem(
+                              num: '1',
+                              title: 'Pilih Minimarket',
+                              desc: 'Pada halaman Xendit, pilih metode pembayaran Alfamart (Alfamidi / Lawson / Dan+Dan) untuk mendapatkan Kode Pembayaran.',
+                            ),
+                            _GuideStepItem(
+                              num: '2',
+                              title: 'Tunjukkan ke Kasir',
+                              desc: 'Kunjungi gerai terdekat dan tunjukkan Kode Pembayaran Xendit kepada kasir.',
+                            ),
+                            _GuideStepItem(
+                              num: '3',
+                              title: 'Bayar & Simpan Struk',
+                              desc: 'Bayar sesuai nominal ke kasir dan simpan struk fisik sebagai bukti transaksi resmi Anda.',
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const Text(
-                  'Panduan langkah pembayaran tagihan otomatis via Xendit Payment Gateway.',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                const SizedBox(height: 16),
-
-                // Tabs
-                Container(
-                  height: 44,
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: TabBar(
-                    dividerColor: Colors.transparent,
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    labelPadding: EdgeInsets.zero,
-                    indicator: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(9),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.06),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
+
+                  // Note & Support Button
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFDBEAFE)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Color(0xFF1D4ED8), size: 18),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Seluruh transaksi Xendit diproses secara terenkripsi & terverifikasi otomatis 24/7.',
+                            style: TextStyle(fontSize: 11, color: Color(0xFF1E40AF)),
+                          ),
                         ),
                       ],
                     ),
-                    labelColor: primaryColor,
-                    unselectedLabelColor: const Color(0xFF64748B),
-                    labelStyle: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    unselectedLabelStyle: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    tabs: const [
-                      Tab(
-                        height: 36,
-                        child: Center(
-                          child: Text('Bank VA', textAlign: TextAlign.center),
-                        ),
-                      ),
-                      Tab(
-                        height: 36,
-                        child: Center(
-                          child: Text('QRIS & E-Wallet', textAlign: TextAlign.center),
-                        ),
-                      ),
-                      Tab(
-                        height: 36,
-                        child: Center(
-                          child: Text('Gerai Retail', textAlign: TextAlign.center),
-                        ),
-                      ),
-                    ],
                   ),
-                ),
-                const SizedBox(height: 16),
-
-                // Tab Contents
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      // Tab 1: Virtual Account
-                      ListView(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        children: const [
-                          _GuideStepItem(
-                            num: '1',
-                            title: 'Buka Halaman Pembayaran Xendit',
-                            desc: 'Klik tombol Pembayaran pada invoice tagihan Anda untuk membuka link resmi Xendit.',
-                          ),
-                          _GuideStepItem(
-                            num: '2',
-                            title: 'Pilih Bank Pilihan Anda',
-                            desc: 'Pilih Virtual Account bank Anda (BCA, Mandiri, BRI, BNI, Permata, dll) untuk memunculkan nomor Kode VA.',
-                          ),
-                          _GuideStepItem(
-                            num: '3',
-                            title: 'Lakukan Transfer VA',
-                            desc: 'Buka M-Banking / ATM Anda, pilih Transfer ➔ Virtual Account, tempelkan nomor VA & bayar sesuai nominal.',
-                          ),
-                          _GuideStepItem(
-                            num: '4',
-                            title: 'Verifikasi Otomatis',
-                            desc: 'Setelah transfer selesai, sistem Xendit akan memverifikasi otomatis dalam hitungan detik tanpa perlu kirim bukti transfer.',
-                          ),
-                        ],
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _openUrl(whatsappUrl),
+                      icon: const Icon(Icons.support_agent, size: 18),
+                      label: const Text('Bantuan CS WhatsApp'),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      // Tab 2: QRIS & E-Wallet
-                      ListView(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        children: const [
-                          _GuideStepItem(
-                            num: '1',
-                            title: 'Pilih QRIS / E-Wallet',
-                            desc: 'Pada halaman pembayaran Xendit, pilih opsi QRIS atau E-Wallet (GoPay, ShopeePay, OVO, DANA).',
-                          ),
-                          _GuideStepItem(
-                            num: '2',
-                            title: 'Pindai (Scan) Kode QRIS',
-                            desc: 'Gunakan fitur Scan QRIS pada aplikasi M-Banking atau E-Wallet pilihan Anda.',
-                          ),
-                          _GuideStepItem(
-                            num: '3',
-                            title: 'Selesaikan Transaksi',
-                            desc: 'Konfirmasi nama & nominal tagihan, lalu masukkan PIN E-Wallet Anda untuk menyelesaikan pembayaran.',
-                          ),
-                        ],
-                      ),
-                      // Tab 3: Gerai Retail
-                      ListView(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        children: const [
-                          _GuideStepItem(
-                            num: '1',
-                            title: 'Pilih Minimarket',
-                            desc: 'Pada halaman Xendit, pilih metode pembayaran Alfamart atau Indomaret untuk mendapatkan Kode Pembayaran.',
-                          ),
-                          _GuideStepItem(
-                            num: '2',
-                            title: 'Tunjukkan ke Kasir',
-                            desc: 'Kunjungi gerai terdekat dan tunjukkan Kode Pembayaran Xendit kepada kasir.',
-                          ),
-                          _GuideStepItem(
-                            num: '3',
-                            title: 'Bayar & Simpan Struk',
-                            desc: 'Bayar sesuai nominal ke kasir dan simpan struk fisik sebagai bukti transaksi resmi Anda.',
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Note & Support Button
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEFF6FF),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFDBEAFE)),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.info_outline, color: Color(0xFF1D4ED8), size: 18),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Seluruh transaksi Xendit diproses secara terenkripsi & terverifikasi otomatis 24/7.',
-                          style: TextStyle(fontSize: 11, color: Color(0xFF1E40AF)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _openUrl(whatsappUrl),
-                    icon: const Icon(Icons.support_agent, size: 18),
-                    label: const Text('Bantuan CS WhatsApp'),
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                ],
+              ),
             ),
           ),
         );
       },
     );
   }
+
 }
 
 class _GuideStepItem extends StatelessWidget {

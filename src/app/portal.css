@@ -300,3 +300,31 @@
 .portal-modal-btn-support:hover { background: #dbeafe; }
 .portal-modal-btn-close { font-size: 0.78125rem; font-weight: 700; color: #475569; background: #f1f5f9; border: 1px solid #e2e8f0; padding: 0.625rem 1.25rem; border-radius: 0.75rem; cursor: pointer; transition: all 0.2s; }
 .portal-modal-btn-close:hover { background: #e2e8f0; }
+
+@media (max-width: 640px) {
+  .portal-modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .portal-modal-card {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    max-height: 82vh;
+    padding: 1.25rem 1.25rem calc(2.5rem + env(safe-area-inset-bottom, 1.5rem));
+  }
+  .portal-modal-footer {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding-bottom: 1.5rem;
+  }
+  .portal-modal-btn-support, .portal-modal-btn-close {
+    width: 100%;
+    text-align: center;
+    padding: 0.75rem 1rem;
+    box-sizing: border-box;
+    display: block;
+  }
+}
+

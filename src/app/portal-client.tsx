@@ -1349,9 +1349,10 @@ export default function PortalDashboardClient({ customerData }: Props) {
                     <span className="portal-guide-num">1</span>
                     <div>
                       <strong>Pilih Minimarket</strong>
-                      <p>Pada halaman Xendit, pilih metode pembayaran <b>Alfamart</b> atau <b>Indomaret</b> untuk mendapatkan Kode Pembayaran.</p>
+                      <p>Pada halaman Xendit, pilih metode pembayaran <b>Alfamart</b> untuk mendapatkan Kode Pembayaran.</p>
                     </div>
                   </div>
+
                   <div className="portal-guide-step">
                     <span className="portal-guide-num">2</span>
                     <div>
