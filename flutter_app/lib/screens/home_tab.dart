@@ -305,12 +305,19 @@ class HomeTab extends StatelessWidget {
                 icon: const Icon(Icons.payment, color: Colors.white, size: 16),
                 label: const Text(
                   'Pembayaran',
-                  style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
                   disabledBackgroundColor: Colors.grey.shade300,
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 4,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -320,15 +327,30 @@ class HomeTab extends StatelessWidget {
             const SizedBox(width: 6),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => _showPaymentGuideModal(context, primaryColor, provider.brandWhatsapp),
-                icon: Icon(Icons.menu_book_rounded, color: primaryColor, size: 16),
+                onPressed: () => _showPaymentGuideModal(
+                  context,
+                  primaryColor,
+                  provider.brandWhatsapp,
+                ),
+                icon: Icon(
+                  Icons.menu_book_rounded,
+                  color: primaryColor,
+                  size: 16,
+                ),
                 label: Text(
                   'Cara Bayar',
-                  style: TextStyle(color: primaryColor, fontSize: 11, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 style: OutlinedButton.styleFrom(
                   side: BorderSide(color: primaryColor),
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 4,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -342,11 +364,18 @@ class HomeTab extends StatelessWidget {
                 icon: Icon(Icons.support_agent, color: primaryColor, size: 16),
                 label: Text(
                   'CS Support',
-                  style: TextStyle(color: primaryColor, fontSize: 11, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 style: OutlinedButton.styleFrom(
                   side: BorderSide(color: primaryColor),
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 4,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -437,25 +466,34 @@ class HomeTab extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: isPaid
                                 ? Colors.green.shade50
-                                : (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
-                                    ? Colors.orange.shade50
-                                    : Colors.red.shade50,
+                                : (invoice.statusInvoice.toLowerCase() ==
+                                          'kadaluarsa' ||
+                                      invoice.statusInvoice.toLowerCase() ==
+                                          'expired')
+                                ? Colors.orange.shade50
+                                : Colors.red.shade50,
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            isPaid 
-                                ? 'Lunas' 
-                                : (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
-                                    ? 'Terlambat' 
-                                    : invoice.statusInvoice,
+                            isPaid
+                                ? 'Lunas'
+                                : (invoice.statusInvoice.toLowerCase() ==
+                                          'kadaluarsa' ||
+                                      invoice.statusInvoice.toLowerCase() ==
+                                          'expired')
+                                ? 'Terlambat'
+                                : invoice.statusInvoice,
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                               color: isPaid
                                   ? Colors.green.shade700
-                                  : (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
-                                      ? Colors.orange.shade700
-                                      : Colors.red.shade700,
+                                  : (invoice.statusInvoice.toLowerCase() ==
+                                            'kadaluarsa' ||
+                                        invoice.statusInvoice.toLowerCase() ==
+                                            'expired')
+                                  ? Colors.orange.shade700
+                                  : Colors.red.shade700,
                             ),
                           ),
                         ),
@@ -520,7 +558,11 @@ class HomeTab extends StatelessWidget {
     );
   }
 
-  void _showPaymentGuideModal(BuildContext context, Color primaryColor, String whatsappUrl) {
+  void _showPaymentGuideModal(
+    BuildContext context,
+    Color primaryColor,
+    String whatsappUrl,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -535,8 +577,14 @@ class HomeTab extends StatelessWidget {
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+            padding: EdgeInsets.fromLTRB(
+              20,
+              20,
+              20,
+              20 + MediaQuery.of(context).padding.bottom,
+            ),
             child: SafeArea(
+
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -546,11 +594,18 @@ class HomeTab extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.menu_book_rounded, color: primaryColor, size: 22),
+                          Icon(
+                            Icons.menu_book_rounded,
+                            color: primaryColor,
+                            size: 22,
+                          ),
                           const SizedBox(width: 8),
                           const Text(
                             'Petunjuk Pembayaran Xendit',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                       ),
@@ -609,13 +664,19 @@ class HomeTab extends StatelessWidget {
                         Tab(
                           height: 36,
                           child: Center(
-                            child: Text('QRIS & E-Wallet', textAlign: TextAlign.center),
+                            child: Text(
+                              'QRIS & E-Wallet',
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         ),
                         Tab(
                           height: 36,
                           child: Center(
-                            child: Text('Gerai Retail', textAlign: TextAlign.center),
+                            child: Text(
+                              'Gerai Retail',
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         ),
                       ],
@@ -634,22 +695,26 @@ class HomeTab extends StatelessWidget {
                             _GuideStepItem(
                               num: '1',
                               title: 'Buka Halaman Pembayaran Xendit',
-                              desc: 'Klik tombol Pembayaran pada invoice tagihan Anda untuk membuka link resmi Xendit.',
+                              desc:
+                                  'Klik tombol Pembayaran pada invoice tagihan Anda untuk membuka link resmi Xendit.',
                             ),
                             _GuideStepItem(
                               num: '2',
                               title: 'Pilih Bank Pilihan Anda',
-                              desc: 'Pilih Virtual Account bank Anda (BCA, Mandiri, BRI, BNI, Permata, dll) untuk memunculkan nomor Kode VA.',
+                              desc:
+                                  'Pilih Virtual Account bank Anda (BCA, Mandiri, BRI, BNI, Permata, dll) untuk memunculkan nomor Kode VA.',
                             ),
                             _GuideStepItem(
                               num: '3',
                               title: 'Lakukan Transfer VA',
-                              desc: 'Buka M-Banking / ATM Anda, pilih Transfer ➔ Virtual Account, tempelkan nomor VA & bayar sesuai nominal.',
+                              desc:
+                                  'Buka M-Banking / ATM Anda, pilih Transfer ➔ Virtual Account, tempelkan nomor VA & bayar sesuai nominal.',
                             ),
                             _GuideStepItem(
                               num: '4',
                               title: 'Verifikasi Otomatis',
-                              desc: 'Setelah transfer selesai, sistem Xendit akan memverifikasi otomatis dalam hitungan detik tanpa perlu kirim bukti transfer.',
+                              desc:
+                                  'Setelah transfer selesai, sistem Xendit akan memverifikasi otomatis dalam hitungan detik tanpa perlu kirim bukti transfer.',
                             ),
                           ],
                         ),
@@ -660,17 +725,20 @@ class HomeTab extends StatelessWidget {
                             _GuideStepItem(
                               num: '1',
                               title: 'Pilih QRIS / E-Wallet',
-                              desc: 'Pada halaman pembayaran Xendit, pilih opsi QRIS atau E-Wallet (GoPay, ShopeePay, OVO, DANA).',
+                              desc:
+                                  'Pada halaman pembayaran Xendit, pilih opsi QRIS atau E-Wallet (GoPay, ShopeePay, OVO, DANA).',
                             ),
                             _GuideStepItem(
                               num: '2',
                               title: 'Pindai (Scan) Kode QRIS',
-                              desc: 'Gunakan fitur Scan QRIS pada aplikasi M-Banking atau E-Wallet pilihan Anda.',
+                              desc:
+                                  'Gunakan fitur Scan QRIS pada aplikasi M-Banking atau E-Wallet pilihan Anda.',
                             ),
                             _GuideStepItem(
                               num: '3',
                               title: 'Selesaikan Transaksi',
-                              desc: 'Konfirmasi nama & nominal tagihan, lalu masukkan PIN E-Wallet Anda untuk menyelesaikan pembayaran.',
+                              desc:
+                                  'Konfirmasi nama & nominal tagihan, lalu masukkan PIN E-Wallet Anda untuk menyelesaikan pembayaran.',
                             ),
                           ],
                         ),
@@ -681,17 +749,20 @@ class HomeTab extends StatelessWidget {
                             _GuideStepItem(
                               num: '1',
                               title: 'Pilih Minimarket',
-                              desc: 'Pada halaman Xendit, pilih metode pembayaran Alfamart (Alfamidi / Lawson / Dan+Dan) untuk mendapatkan Kode Pembayaran.',
+                              desc:
+                                  'Pada halaman Xendit, pilih metode pembayaran Alfamart untuk mendapatkan Kode Pembayaran.',
                             ),
                             _GuideStepItem(
                               num: '2',
                               title: 'Tunjukkan ke Kasir',
-                              desc: 'Kunjungi gerai terdekat dan tunjukkan Kode Pembayaran Xendit kepada kasir.',
+                              desc:
+                                  'Kunjungi gerai terdekat dan tunjukkan Kode Pembayaran Xendit kepada kasir.',
                             ),
                             _GuideStepItem(
                               num: '3',
                               title: 'Bayar & Simpan Struk',
-                              desc: 'Bayar sesuai nominal ke kasir dan simpan struk fisik sebagai bukti transaksi resmi Anda.',
+                              desc:
+                                  'Bayar sesuai nominal ke kasir dan simpan struk fisik sebagai bukti transaksi resmi Anda.',
                             ),
                           ],
                         ),
@@ -709,12 +780,19 @@ class HomeTab extends StatelessWidget {
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.info_outline, color: Color(0xFF1D4ED8), size: 18),
+                        Icon(
+                          Icons.info_outline,
+                          color: Color(0xFF1D4ED8),
+                          size: 18,
+                        ),
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'Seluruh transaksi Xendit diproses secara terenkripsi & terverifikasi otomatis 24/7.',
-                            style: TextStyle(fontSize: 11, color: Color(0xFF1E40AF)),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF1E40AF),
+                            ),
                           ),
                         ),
                       ],
@@ -728,12 +806,15 @@ class HomeTab extends StatelessWidget {
                       icon: const Icon(Icons.support_agent, size: 18),
                       label: const Text('Bantuan CS WhatsApp'),
                       style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 24),
+
                 ],
               ),
             ),
@@ -742,7 +823,6 @@ class HomeTab extends StatelessWidget {
       },
     );
   }
-
 }
 
 class _GuideStepItem extends StatelessWidget {
