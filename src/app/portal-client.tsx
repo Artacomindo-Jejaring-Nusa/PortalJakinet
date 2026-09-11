@@ -64,20 +64,23 @@ export default function PortalDashboardClient({ customerData }: Props) {
   const isExpiredInvoice = (invoice: any) => {
     if (!invoice) return true;
     const status = (invoice.status_invoice || '').toLowerCase();
-    
-    // Explicitly hide any invoice marked as Expired, Kadaluarsa, or Batal
-    if (
-      status.includes('expired') ||
-      status.includes('kadaluarsa') ||
-      status.includes('kadaluwarsa') ||
-      status.includes('batal') ||
-      status.includes('cancel')
-    ) {
+    if (status === 'lunas' || status.includes('lunas') || status.includes('paid')) return false;
+
+    // Check if invoice has an active, valid payment link
+    const hasPaymentLink = !!invoice.payment_link && invoice.payment_link !== '#' && invoice.payment_link !== '';
+
+    // Cancelled invoices are hidden
+    if (status.includes('batal') || status.includes('cancel')) return true;
+
+    // Expired invoices without a payment link are hidden.
+    // If an expired invoice HAS a valid payment link, keep it visible so user can pay via link!
+    if ((status.includes('expired') || status.includes('kadaluarsa') || status.includes('kadaluwarsa')) && !hasPaymentLink) {
       return true;
     }
 
     return false;
   };
+
 
 
 

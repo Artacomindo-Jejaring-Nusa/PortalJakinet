@@ -63,19 +63,21 @@ class Invoice {
 
   bool isExpired() {
     final status = statusInvoice.toLowerCase();
-    
-    // Explicitly hide any invoice marked as Expired, Kadaluarsa, or Batal
-    if (status.contains('expired') ||
-        status.contains('kadaluarsa') ||
-        status.contains('kadaluwarsa') ||
-        status.contains('batal') ||
-        status.contains('cancel')) {
+    if (status == 'lunas' || status.contains('lunas') || status.contains('paid')) return false;
+
+    final link = paymentLink;
+    final hasPaymentLink = link != null && link.isNotEmpty && link != '#';
+
+    if (status.contains('batal') || status.contains('cancel')) return true;
+
+    if ((status.contains('expired') || status.contains('kadaluarsa') || status.contains('kadaluwarsa')) && !hasPaymentLink) {
       return true;
     }
 
     return false;
   }
 }
+
 
 
 
