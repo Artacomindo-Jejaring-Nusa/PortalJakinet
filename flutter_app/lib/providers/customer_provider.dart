@@ -148,17 +148,7 @@ class CustomerProvider with ChangeNotifier {
     return _customerData!.invoices.where((inv) => !inv.isExpired()).toList();
   }
 
-  int get totalUnpaid {
-    return activeInvoices
-        .where((inv) => inv.statusInvoice != 'Lunas')
-        .fold(0, (sum, inv) => sum + inv.totalHarga);
-  }
-
-  int get unpaidCount {
-    return activeInvoices.where((inv) => inv.statusInvoice != 'Lunas').length;
-  }
-
-  Invoice? get nextDueInvoice {
+  Invoice? get currentActiveBill {
     final unpaid = activeInvoices.where((inv) => inv.statusInvoice != 'Lunas').toList();
     if (unpaid.isEmpty) return null;
     unpaid.sort((a, b) {
@@ -168,4 +158,14 @@ class CustomerProvider with ChangeNotifier {
     });
     return unpaid.first;
   }
+
+  int get totalUnpaid {
+    return currentActiveBill?.totalHarga ?? 0;
+  }
+
+  int get unpaidCount {
+    return currentActiveBill != null ? 1 : 0;
+  }
+
+  Invoice? get nextDueInvoice => currentActiveBill;
 }
