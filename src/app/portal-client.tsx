@@ -867,7 +867,8 @@ export default function PortalDashboardClient({ customerData }: Props) {
                       </svg>
                       <p>Belum ada riwayat pembayaran</p>
                     </div>
-                  ) : sortedInvoices.slice(0, 3).map((invoice) => {
+                  ) : (
+                    sortedInvoices.slice(0, 3).map((invoice) => {
                       const isPaid = invoice.status_invoice === 'Lunas' || invoice.status_invoice?.toLowerCase().includes('lunas');
                       const isExpired = isExpiredStatus(invoice);
 
@@ -910,7 +911,8 @@ export default function PortalDashboardClient({ customerData }: Props) {
                           </div>
                         </div>
                       );
-                    })}
+                    })
+                  )}
                   </div>
                 </div>
               </div>
