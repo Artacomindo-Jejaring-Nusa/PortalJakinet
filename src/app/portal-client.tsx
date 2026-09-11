@@ -910,8 +910,8 @@ export default function PortalDashboardClient({ customerData }: Props) {
                           </div>
                         </div>
                       );
-                    })
-                  }</div>
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
