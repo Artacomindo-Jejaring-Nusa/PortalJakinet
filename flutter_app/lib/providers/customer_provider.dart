@@ -143,13 +143,18 @@ class CustomerProvider with ChangeNotifier {
 
   bool get isActive => subscriptionStatus.toLowerCase() == 'aktif';
 
-  List<Invoice> get activeInvoices {
+  List<Invoice> get allInvoices {
     if (_customerData == null) return [];
-    return _customerData!.invoices.where((inv) => !inv.isExpired()).toList();
+    return _customerData!.invoices.where((inv) {
+      final status = inv.statusInvoice.toLowerCase();
+      return !status.contains('batal') && !status.contains('cancel');
+    }).toList();
   }
 
+  List<Invoice> get activeInvoices => allInvoices;
+
   Invoice? get currentActiveBill {
-    final unpaid = activeInvoices.where((inv) => inv.statusInvoice != 'Lunas').toList();
+    final unpaid = allInvoices.where((inv) => inv.statusInvoice != 'Lunas' && !inv.statusInvoice.toLowerCase().contains('lunas')).toList();
     if (unpaid.isEmpty) return null;
     unpaid.sort((a, b) {
       if (a.tglJatuhTempo.isEmpty) return 1;

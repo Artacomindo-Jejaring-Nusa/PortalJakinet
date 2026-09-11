@@ -100,7 +100,31 @@ class _HistoryTabState extends State<HistoryTab> {
                     itemCount: filtered.length,
                     itemBuilder: (context, index) {
                       final invoice = filtered[index];
-                      final isPaid = invoice.statusInvoice == 'Lunas';
+                      final isPaid = invoice.statusInvoice == 'Lunas' || invoice.statusInvoice.toLowerCase().contains('lunas');
+                      final currentActiveBill = provider.currentActiveBill;
+                      final isCurrentActive = !isPaid && currentActiveBill != null && invoice.id == currentActiveBill.id;
+                      final isExpired = !isPaid && !isCurrentActive;
+
+                      String badgeText = isPaid
+                          ? 'Lunas'
+                          : isCurrentActive
+                              ? 'Tagihan Berjalan'
+                              : 'Kadaluarsa';
+                      Color badgeBg = isPaid
+                          ? Colors.green.shade50
+                          : isCurrentActive
+                              ? Colors.blue.shade50
+                              : Colors.amber.shade50;
+                      Color badgeTextColor = isPaid
+                          ? Colors.green.shade700
+                          : isCurrentActive
+                              ? Colors.blue.shade700
+                              : Colors.amber.shade900;
+                      Color dotColor = isPaid
+                          ? Colors.green
+                          : isCurrentActive
+                              ? Colors.blue
+                              : Colors.amber;
 
                       return Card(
                         margin: const EdgeInsets.only(bottom: 12),
@@ -121,10 +145,10 @@ class _HistoryTabState extends State<HistoryTab> {
                                     height: 8,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: isPaid ? Colors.green : Colors.red,
+                                      color: dotColor,
                                     ),
                                   ),
-                                   const SizedBox(width: 8),
+                                  const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       invoice.invoiceNumber,
@@ -139,27 +163,15 @@ class _HistoryTabState extends State<HistoryTab> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: isPaid
-                                          ? Colors.green.shade50
-                                          : (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
-                                              ? Colors.orange.shade50
-                                              : Colors.red.shade50,
+                                      color: badgeBg,
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
-                                      isPaid 
-                                          ? 'Lunas' 
-                                          : (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
-                                              ? 'Kadaluarsa' 
-                                              : invoice.statusInvoice,
+                                      badgeText,
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
-                                        color: isPaid
-                                            ? Colors.green.shade700
-                                            : (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
-                                                ? Colors.amber.shade800
-                                                : Colors.red.shade700,
+                                        color: badgeTextColor,
                                       ),
                                     ),
                                   ),
@@ -205,29 +217,35 @@ class _HistoryTabState extends State<HistoryTab> {
                                         },
                                         tooltip: 'Download PDF',
                                       ),
-                                      if (!isPaid && invoice.paymentLink != null) ...[
+                                      if (!isPaid) ...[
                                         const SizedBox(width: 4),
                                         ElevatedButton(
-                                          onPressed: () => _openUrl(invoice.paymentLink!),
+                                          onPressed: () {
+                                            if (invoice.paymentLink != null && invoice.paymentLink!.isNotEmpty && invoice.paymentLink != '#') {
+                                              _openUrl(invoice.paymentLink!);
+                                            } else {
+                                              _openUrl(provider.brandWhatsapp);
+                                            }
+                                          },
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
+                                            backgroundColor: isExpired
                                                 ? Colors.amber.shade100
                                                 : primaryColor,
-                                            foregroundColor: (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
+                                            foregroundColor: isExpired
                                                 ? Colors.amber.shade900
                                                 : Colors.white,
-                                            elevation: (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired') ? 0 : 2,
+                                            elevation: isExpired ? 0 : 2,
                                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                             minimumSize: Size.zero,
                                           ),
                                           child: Text(
-                                            (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
+                                            isExpired
                                                 ? 'Link Expired'
                                                 : 'Bayar',
                                             style: TextStyle(
                                               fontSize: 12,
                                               fontWeight: FontWeight.bold,
-                                              color: (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
+                                              color: isExpired
                                                   ? Colors.amber.shade900
                                                   : Colors.white,
                                             ),

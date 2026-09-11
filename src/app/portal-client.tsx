@@ -60,48 +60,37 @@ export default function PortalDashboardClient({ customerData }: Props) {
     }
   };
 
-  // Helper: check if an invoice is expired/kadaluarsa/batal
-  const isExpiredInvoice = (invoice: any) => {
-    if (!invoice) return true;
-    const status = (invoice.status_invoice || '').toLowerCase();
-    if (status === 'lunas' || status.includes('lunas') || status.includes('paid')) return false;
+  // All invoices except cancelled ones
+  const allInvoices = (customerData?.invoices || []).filter((inv) => {
+    if (!inv) return false;
+    const status = (inv.status_invoice || '').toLowerCase();
+    return !status.includes('batal') && !status.includes('cancel');
+  });
 
-    // Check if invoice has an active, valid payment link
-    const hasPaymentLink = !!invoice.payment_link && invoice.payment_link !== '#' && invoice.payment_link !== '';
+  // All unpaid invoices sorted newest month first (e.g. September 2026 before June 2026)
+  const allUnpaidInvoices = allInvoices
+    .filter((inv) => inv && inv.status_invoice !== 'Lunas' && !inv.status_invoice?.toLowerCase().includes('lunas'))
+    .sort((a, b) => {
+      const aTime = a.tgl_jatuh_tempo ? new Date(a.tgl_jatuh_tempo).getTime() : 0;
+      const bTime = b.tgl_jatuh_tempo ? new Date(b.tgl_jatuh_tempo).getTime() : 0;
+      return bTime - aTime;
+    });
 
-    // Cancelled invoices are hidden
-    if (status.includes('batal') || status.includes('cancel')) return true;
+  // Current active unpaid bill = newest unpaid invoice (Tagihan Berjalan)
+  const currentActiveBill = allUnpaidInvoices[0];
+  const nextDueInvoice = currentActiveBill;
 
-    // Expired invoices without a payment link are hidden.
-    // If an expired invoice HAS a valid payment link, keep it visible so user can pay via link!
-    if ((status.includes('expired') || status.includes('kadaluarsa') || status.includes('kadaluwarsa')) && !hasPaymentLink) {
-      return true;
-    }
+  // Stats display current active bill amount & count (Tagihan Berjalan)
+  const totalUnpaid = currentActiveBill ? (currentActiveBill.total_harga || 0) : 0;
+  const unpaidCount = currentActiveBill ? 1 : 0;
 
-    return false;
-  };
-
-  const isExpiredStatus = (invoice: any) => {
-    if (!invoice) return false;
-    const status = (invoice.status_invoice || '').toLowerCase();
-    return status.includes('expired') || status.includes('kadaluarsa') || status.includes('kadaluwarsa');
-  };
-
-  // Active invoices = non-hidden
-  const activeInvoices = (customerData?.invoices || []).filter((inv) => inv && !isExpiredInvoice(inv));
-
-  // Sort invoices: active non-expired unpaid first, expired unpaid next, paid last
-  const sortedInvoices = activeInvoices.slice().sort((a, b) => {
+  // Sort all invoices for display: unpaid first (newest month first), paid last (newest month first)
+  const sortedInvoices = allInvoices.slice().sort((a, b) => {
     const aPaid = a.status_invoice === 'Lunas' || a.status_invoice?.toLowerCase().includes('lunas');
     const bPaid = b.status_invoice === 'Lunas' || b.status_invoice?.toLowerCase().includes('lunas');
-    const aExp = isExpiredStatus(a);
-    const bExp = isExpiredStatus(b);
 
     if (aPaid && !bPaid) return 1;
     if (!aPaid && bPaid) return -1;
-
-    if (!aExp && bExp) return -1;
-    if (aExp && !bExp) return 1;
 
     const aTime = a.tgl_jatuh_tempo ? new Date(a.tgl_jatuh_tempo).getTime() : 0;
     const bTime = b.tgl_jatuh_tempo ? new Date(b.tgl_jatuh_tempo).getTime() : 0;
@@ -116,22 +105,82 @@ export default function PortalDashboardClient({ customerData }: Props) {
     return true;
   });
 
-  // All unpaid invoices sorted newest month first (e.g. September 2026 before June 2026)
-  const allUnpaidInvoices = activeInvoices
-    .filter((inv) => inv && inv.status_invoice !== 'Lunas')
-    .sort((a, b) => {
-      const aTime = a.tgl_jatuh_tempo ? new Date(a.tgl_jatuh_tempo).getTime() : 0;
-      const bTime = b.tgl_jatuh_tempo ? new Date(b.tgl_jatuh_tempo).getTime() : 0;
-      return bTime - aTime;
-    });
+  const getInvoiceCategory = (invoice: any) => {
+    if (!invoice) return { type: 'unknown', label: '-', badgeText: '-', badgeBg: '#f1f5f9', badgeColor: '#64748b', badgeBorder: '#e2e8f0', dotClass: 'portal-invoice-status-dot--expired', textClass: 'portal-invoice-status-text--expired', iconClass: 'portal-invoice-icon--expired', buttonText: null, buttonLink: '#', buttonClass: 'portal-invoice-pay-btn' };
+    
+    const status = (invoice.status_invoice || '').toLowerCase();
+    const isPaid = status === 'lunas' || status.includes('lunas') || status.includes('paid');
+    const isCancelled = status.includes('batal') || status.includes('cancel');
+    const isExpiredInDb = status.includes('expired') || status.includes('kadaluarsa') || status.includes('kadaluwarsa');
+    const isCurrentActive = !isPaid && currentActiveBill && invoice.id === currentActiveBill.id;
+    const hasLink = !!invoice.payment_link && invoice.payment_link !== '#' && invoice.payment_link !== '';
 
-  // Current active unpaid bill = newest unpaid invoice
-  const currentActiveBill = allUnpaidInvoices[0];
-  const nextDueInvoice = currentActiveBill;
+    if (isPaid) {
+      return {
+        type: 'paid',
+        label: 'Sudah Bayar',
+        badgeText: 'Lunas',
+        badgeBg: '#f0fdf4',
+        badgeColor: '#16a34a',
+        badgeBorder: '#bbf7d0',
+        dotClass: 'portal-invoice-status-dot--paid',
+        textClass: 'portal-invoice-status-text--paid',
+        iconClass: 'portal-invoice-icon--paid',
+        buttonText: null,
+        buttonLink: null,
+        buttonClass: '',
+      };
+    }
 
-  // Stats display current active bill amount & count (Tagihan Berjalan)
-  const totalUnpaid = currentActiveBill ? (currentActiveBill.total_harga || 0) : 0;
-  const unpaidCount = currentActiveBill ? 1 : 0;
+    if (isCurrentActive) {
+      return {
+        type: 'current_active',
+        label: isExpiredInDb ? 'Terlambat' : 'Belum Bayar',
+        badgeText: 'Tagihan Berjalan',
+        badgeBg: '#eff6ff',
+        badgeColor: '#2563eb',
+        badgeBorder: '#bfdbfe',
+        dotClass: isExpiredInDb ? 'portal-invoice-status-dot--expired' : 'portal-invoice-status-dot--unpaid',
+        textClass: isExpiredInDb ? 'portal-invoice-status-text--expired' : 'portal-invoice-status-text--unpaid',
+        iconClass: isExpiredInDb ? 'portal-invoice-icon--expired' : 'portal-invoice-icon--unpaid',
+        buttonText: 'Bayar Sekarang',
+        buttonLink: hasLink ? invoice.payment_link : brandWhatsapp,
+        buttonClass: 'portal-invoice-pay-btn',
+      };
+    }
+
+    if (hasLink && !isExpiredInDb) {
+      return {
+        type: 'overdue_active',
+        label: 'Terlambat',
+        badgeText: 'Terlambat',
+        badgeBg: '#fffbe6',
+        badgeColor: '#b45309',
+        badgeBorder: '#fef08a',
+        dotClass: 'portal-invoice-status-dot--expired',
+        textClass: 'portal-invoice-status-text--expired',
+        iconClass: 'portal-invoice-icon--expired',
+        buttonText: 'Bayar Sekarang',
+        buttonLink: invoice.payment_link,
+        buttonClass: 'portal-invoice-pay-btn',
+      };
+    }
+
+    return {
+      type: 'expired',
+      label: isCancelled ? 'Dibatalkan' : 'Kadaluarsa',
+      badgeText: isCancelled ? 'Dibatalkan' : 'Kadaluarsa',
+      badgeBg: '#fffbe6',
+      badgeColor: '#b45309',
+      badgeBorder: '#fef08a',
+      dotClass: 'portal-invoice-status-dot--expired',
+      textClass: 'portal-invoice-status-text--expired',
+      iconClass: 'portal-invoice-icon--expired',
+      buttonText: 'Link Kadaluarsa',
+      buttonLink: brandWhatsapp,
+      buttonClass: 'portal-invoice-pay-btn--expired',
+    };
+  };
 
   const formatCurrency = (amount: number | null | undefined) => {
     const val = Number(amount || 0);
@@ -181,7 +230,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
 
 
   // Find the latest invoice (paid or unpaid) for "Aktif hingga" calculation
-  const latestInvoice = activeInvoices.slice().sort((a, b) => {
+  const latestInvoice = allInvoices.slice().sort((a: any, b: any) => {
     const aTime = a.tgl_jatuh_tempo ? new Date(a.tgl_jatuh_tempo).getTime() : 0;
     const bTime = b.tgl_jatuh_tempo ? new Date(b.tgl_jatuh_tempo).getTime() : 0;
     return bTime - aTime;
@@ -383,14 +432,12 @@ export default function PortalDashboardClient({ customerData }: Props) {
                   ) : (
                     <div className="portal-invoices-list">
                       {filteredInvoices.map((invoice) => {
-                        const isPaid = invoice.status_invoice === 'Lunas' || invoice.status_invoice?.toLowerCase().includes('lunas');
-                        const isCurrentActive = !isPaid && currentActiveBill && invoice.id === currentActiveBill.id;
-                        const isExpired = !isPaid && !isCurrentActive;
+                        const cat = getInvoiceCategory(invoice);
 
                         return (
                           <div key={invoice.id} className="portal-invoice-item">
                             <div className="portal-invoice-left">
-                              <div className={`portal-invoice-icon ${isPaid ? 'portal-invoice-icon--paid' : isCurrentActive ? 'portal-invoice-icon--unpaid' : 'portal-invoice-icon--expired'}`}>
+                              <div className={`portal-invoice-icon ${cat.iconClass}`}>
                                 <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a1 1 0 01-1-1V5a1 1 0 011-1h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a1 1 0 01-1 1z" />
                                 </svg>
@@ -398,16 +445,9 @@ export default function PortalDashboardClient({ customerData }: Props) {
                               <div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
                                   <h4 className="portal-invoice-num" style={{ margin: 0 }}>{invoice.invoice_number}</h4>
-                                  {isCurrentActive && (
-                                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.125rem 0.5rem', borderRadius: '0.375rem', backgroundColor: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }}>
-                                      Tagihan Berjalan
-                                    </span>
-                                  )}
-                                  {isExpired && (
-                                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.125rem 0.5rem', borderRadius: '0.375rem', backgroundColor: '#fffbe6', color: '#b45309', border: '1px solid #fef08a' }}>
-                                      Riwayat Tagihan
-                                    </span>
-                                  )}
+                                  <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.125rem 0.5rem', borderRadius: '0.375rem', backgroundColor: cat.badgeBg, color: cat.badgeColor, border: `1px solid ${cat.badgeBorder}` }}>
+                                    {cat.badgeText}
+                                  </span>
                                 </div>
                                 <div className="portal-invoice-meta">
                                   <span className="portal-invoice-meta-label">Jatuh Tempo</span>
@@ -420,13 +460,9 @@ export default function PortalDashboardClient({ customerData }: Props) {
                               <div className="portal-invoice-amount-wrap">
                                 <span className="portal-invoice-amount">{formatCurrency(invoice.total_harga)}</span>
                                 <div className="portal-invoice-status-row">
-                                  <div className={`portal-invoice-status-dot ${isPaid ? 'portal-invoice-status-dot--paid' : isCurrentActive ? 'portal-invoice-status-dot--unpaid' : 'portal-invoice-status-dot--expired'}`}></div>
-                                  <span className={`portal-invoice-status-text ${isPaid ? 'portal-invoice-status-text--paid' : isCurrentActive ? 'portal-invoice-status-text--unpaid' : 'portal-invoice-status-text--expired'}`}>
-                                    {isPaid 
-                                      ? 'Sudah Bayar' 
-                                      : isCurrentActive
-                                        ? 'Belum Bayar' 
-                                        : 'Lewat Tempo'}
+                                  <div className={`portal-invoice-status-dot ${cat.dotClass}`}></div>
+                                  <span className={`portal-invoice-status-text ${cat.textClass}`}>
+                                    {cat.label}
                                   </span>
                                 </div>
                               </div>
@@ -442,14 +478,14 @@ export default function PortalDashboardClient({ customerData }: Props) {
                                   </svg>
                                 </button>
 
-                                {!isPaid && invoice.payment_link && (
+                                {cat.buttonText && cat.buttonLink && (
                                   <a
-                                    href={invoice.payment_link}
+                                    href={cat.buttonLink}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="portal-invoice-pay-btn"
+                                    className={cat.buttonClass}
                                   >
-                                    Bayar Sekarang
+                                    {cat.buttonText}
                                   </a>
                                 )}
                               </div>
@@ -860,7 +896,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
                   <span className="pm-offers-link" onClick={() => setMobileTab('history')}>Lihat semua riwayat →</span>
                 </div>
                 <div className="pm-offers-list">
-                  {activeInvoices.length === 0 ? (
+                  {allInvoices.length === 0 ? (
                     <div className="pm-history-empty" style={{ padding: '2rem 0' }}>
                       <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#cbd5e1' }}>
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -869,24 +905,16 @@ export default function PortalDashboardClient({ customerData }: Props) {
                     </div>
                   ) : (
                     sortedInvoices.slice(0, 3).map((invoice) => {
-                      const isPaid = invoice.status_invoice === 'Lunas' || invoice.status_invoice?.toLowerCase().includes('lunas');
-                      const isExpired = isExpiredStatus(invoice);
+                      const cat = getInvoiceCategory(invoice);
 
                       return (
                         <div key={invoice.id} className="pm-history-item">
                           <div className="pm-history-item-top">
-                            <div className={`pm-history-item-dot ${isPaid ? 'pm-history-item-dot--paid' : isExpired ? 'pm-history-item-dot--expired' : 'pm-history-item-dot--unpaid'}`}></div>
+                            <div className={`pm-history-item-dot ${cat.dotClass}`}></div>
                             <span className="pm-history-item-num">{invoice.invoice_number}</span>
-                            {!isPaid && !isExpired && (
-                              <span style={{ fontSize: '0.625rem', fontWeight: 700, padding: '0.1rem 0.375rem', borderRadius: '0.25rem', backgroundColor: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }}>
-                                Aktif
-                              </span>
-                            )}
-                            {!isPaid && isExpired && (
-                              <span style={{ fontSize: '0.625rem', fontWeight: 700, padding: '0.1rem 0.375rem', borderRadius: '0.25rem', backgroundColor: '#fffbe6', color: '#b45309', border: '1px solid #fef08a' }}>
-                                Terlambat
-                              </span>
-                            )}
+                            <span style={{ fontSize: '0.625rem', fontWeight: 700, padding: '0.1rem 0.375rem', borderRadius: '0.25rem', backgroundColor: cat.badgeBg, color: cat.badgeColor, border: `1px solid ${cat.badgeBorder}` }}>
+                              {cat.badgeText}
+                            </span>
                           </div>
                           <div className="pm-history-item-body">
                             <div>
@@ -894,17 +922,17 @@ export default function PortalDashboardClient({ customerData }: Props) {
                               <span className="pm-history-item-date">{formatDate(invoice.tgl_jatuh_tempo)}</span>
                             </div>
                             <div className="pm-history-item-actions">
-                              {!isPaid && invoice.payment_link && (
+                              {cat.buttonText && cat.buttonLink && (
                                 <a
-                                  href={invoice.payment_link}
+                                  href={cat.buttonLink}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="pm-history-pay-btn"
+                                  className={cat.type === 'expired' ? 'pm-history-pay-btn--expired' : 'pm-history-pay-btn'}
                                 >
-                                  Bayar
+                                  {cat.buttonText === 'Bayar Sekarang' ? 'Bayar' : cat.buttonText}
                                 </a>
                               )}
-                              {isPaid && (
+                              {cat.type === 'paid' && (
                                 <span className="pm-history-paid-badge">Lunas</span>
                               )}
                             </div>
@@ -943,24 +971,16 @@ export default function PortalDashboardClient({ customerData }: Props) {
               ) : (
                 <div className="pm-history-list">
                   {filteredInvoices.map((invoice) => {
-                    const isPaid = invoice.status_invoice === 'Lunas' || invoice.status_invoice?.toLowerCase().includes('lunas');
-                    const isExpired = isExpiredStatus(invoice);
+                    const cat = getInvoiceCategory(invoice);
 
                     return (
                       <div key={invoice.id} className="pm-history-item">
                         <div className="pm-history-item-top">
-                          <div className={`pm-history-item-dot ${isPaid ? 'pm-history-item-dot--paid' : isExpired ? 'pm-history-item-dot--expired' : 'pm-history-item-dot--unpaid'}`}></div>
+                          <div className={`pm-history-item-dot ${cat.dotClass}`}></div>
                           <span className="pm-history-item-num">{invoice.invoice_number}</span>
-                          {!isPaid && !isExpired && (
-                            <span style={{ fontSize: '0.625rem', fontWeight: 700, padding: '0.1rem 0.375rem', borderRadius: '0.25rem', backgroundColor: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }}>
-                              Aktif
-                            </span>
-                          )}
-                          {isExpired && (
-                            <span style={{ fontSize: '0.625rem', fontWeight: 700, padding: '0.1rem 0.375rem', borderRadius: '0.25rem', backgroundColor: '#fffbe6', color: '#b45309', border: '1px solid #fef08a' }}>
-                              Kadaluarsa
-                            </span>
-                          )}
+                          <span style={{ fontSize: '0.625rem', fontWeight: 700, padding: '0.1rem 0.375rem', borderRadius: '0.25rem', backgroundColor: cat.badgeBg, color: cat.badgeColor, border: `1px solid ${cat.badgeBorder}` }}>
+                            {cat.badgeText}
+                          </span>
                         </div>
                         <div className="pm-history-item-body">
                           <div>
@@ -968,17 +988,17 @@ export default function PortalDashboardClient({ customerData }: Props) {
                             <span className="pm-history-item-date">{formatDate(invoice.tgl_jatuh_tempo)}</span>
                           </div>
                           <div className="pm-history-item-actions">
-                            {!isPaid && invoice.payment_link && (
+                            {cat.buttonText && cat.buttonLink && (
                               <a
-                                href={invoice.payment_link}
+                                href={cat.buttonLink}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className={isExpired ? "pm-history-pay-btn--expired" : "pm-history-pay-btn"}
+                                className={cat.type === 'expired' ? 'pm-history-pay-btn--expired' : 'pm-history-pay-btn'}
                               >
-                                {isExpired ? 'Link Expired' : 'Bayar'}
+                                {cat.buttonText === 'Bayar Sekarang' ? 'Bayar' : cat.buttonText}
                               </a>
                             )}
-                            {isPaid && (
+                            {cat.type === 'paid' && (
                               <span className="pm-history-paid-badge">Lunas</span>
                             )}
                             <button onClick={() => window.open(`/api/invoice/${invoice.id}/pdf`, '_blank')} className="pm-history-pdf-btn">
