@@ -169,16 +169,16 @@ export default function PortalDashboardClient({ customerData }: Props) {
   const actualSubscriptionStatus = calculateSubscriptionStatus();
   const isActive = actualSubscriptionStatus.toLowerCase() === 'aktif';
 
-  // Find the nearest due date for active unpaid invoices
-  const unpaidInvoices = activeUnpaidInvoices.length > 0
-    ? activeUnpaidInvoices
-    : activeInvoices.filter((inv) => inv && inv.status_invoice !== 'Lunas');
+  // Find the latest unpaid invoice (newest due date first) for quick payment
+  const unpaidInvoices = activeInvoices
+    .filter((inv) => inv && inv.status_invoice !== 'Lunas')
+    .sort((a, b) => {
+      const aTime = a.tgl_jatuh_tempo ? new Date(a.tgl_jatuh_tempo).getTime() : 0;
+      const bTime = b.tgl_jatuh_tempo ? new Date(b.tgl_jatuh_tempo).getTime() : 0;
+      return bTime - aTime;
+    });
 
-  const nextDueInvoice = unpaidInvoices.slice().sort((a, b) => {
-    const aTime = a.tgl_jatuh_tempo ? new Date(a.tgl_jatuh_tempo).getTime() : 0;
-    const bTime = b.tgl_jatuh_tempo ? new Date(b.tgl_jatuh_tempo).getTime() : 0;
-    return aTime - bTime;
-  })[0];
+  const nextDueInvoice = unpaidInvoices[0];
 
   // Find the latest invoice (paid or unpaid) for "Aktif hingga" calculation
   const latestInvoice = activeInvoices.slice().sort((a, b) => {
@@ -387,7 +387,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
                         const isExpired = isExpiredStatus(invoice);
 
                         return (
-                          <div key={invoice.id} className={`portal-invoice-item ${isExpired ? 'portal-invoice-item--expired' : ''}`}>
+                          <div key={invoice.id} className="portal-invoice-item">
                             <div className="portal-invoice-left">
                               <div className={`portal-invoice-icon ${isPaid ? 'portal-invoice-icon--paid' : isExpired ? 'portal-invoice-icon--expired' : 'portal-invoice-icon--unpaid'}`}>
                                 <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -402,9 +402,9 @@ export default function PortalDashboardClient({ customerData }: Props) {
                                       Tagihan Aktif
                                     </span>
                                   )}
-                                  {isExpired && (
+                                  {!isPaid && isExpired && (
                                     <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.125rem 0.5rem', borderRadius: '0.375rem', backgroundColor: '#fffbe6', color: '#b45309', border: '1px solid #fef08a' }}>
-                                      Kadaluarsa
+                                      Terlambat
                                     </span>
                                   )}
                                 </div>
@@ -424,7 +424,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
                                     {isPaid 
                                       ? 'Sudah Bayar' 
                                       : isExpired
-                                        ? 'Kadaluarsa' 
+                                        ? 'Terlambat' 
                                         : 'Belum Bayar'}
                                   </span>
                                 </div>
@@ -446,10 +446,9 @@ export default function PortalDashboardClient({ customerData }: Props) {
                                     href={invoice.payment_link}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className={isExpired ? "portal-invoice-pay-btn--expired" : "portal-invoice-pay-btn"}
-                                    title={isExpired ? "Link pembayaran ini sudah kadaluarsa (Gunakan jika diarahkan Admin/CS)" : "Bayar tagihan aktif"}
+                                    className="portal-invoice-pay-btn"
                                   >
-                                    {isExpired ? 'Link Kadaluarsa' : 'Bayar Sekarang'}
+                                    Bayar Sekarang
                                   </a>
                                 )}
                               </div>
@@ -827,7 +826,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
 
               {/* Quick Actions */}
               <div className="pm-quick-actions">
-                <a href={nextDueInvoice?.payment_link || '#'} className="pm-quick-action" target={nextDueInvoice?.payment_link ? '_blank' : undefined}>
+                <a href={nextDueInvoice?.payment_link || brandWhatsapp} className="pm-quick-action" target="_blank" rel="noopener noreferrer">
                   <div className="pm-quick-action-icon">
                     <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -882,9 +881,9 @@ export default function PortalDashboardClient({ customerData }: Props) {
                                 Aktif
                               </span>
                             )}
-                            {isExpired && (
+                            {!isPaid && isExpired && (
                               <span style={{ fontSize: '0.625rem', fontWeight: 700, padding: '0.1rem 0.375rem', borderRadius: '0.25rem', backgroundColor: '#fffbe6', color: '#b45309', border: '1px solid #fef08a' }}>
-                                Kadaluarsa
+                                Terlambat
                               </span>
                             )}
                           </div>
@@ -899,9 +898,9 @@ export default function PortalDashboardClient({ customerData }: Props) {
                                   href={invoice.payment_link}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className={isExpired ? "pm-history-pay-btn--expired" : "pm-history-pay-btn"}
+                                  className="pm-history-pay-btn"
                                 >
-                                  {isExpired ? 'Link Expired' : 'Bayar'}
+                                  Bayar
                                 </a>
                               )}
                               {isPaid && (

@@ -164,7 +164,7 @@ class CustomerProvider with ChangeNotifier {
     unpaid.sort((a, b) {
       if (a.tglJatuhTempo.isEmpty) return 1;
       if (b.tglJatuhTempo.isEmpty) return -1;
-      return a.tglJatuhTempo.compareTo(b.tglJatuhTempo);
+      return b.tglJatuhTempo.compareTo(a.tglJatuhTempo);
     });
     return unpaid.first;
   }
