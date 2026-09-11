@@ -81,13 +81,34 @@ export default function PortalDashboardClient({ customerData }: Props) {
     return false;
   };
 
+  const isExpiredStatus = (invoice: any) => {
+    if (!invoice) return false;
+    const status = (invoice.status_invoice || '').toLowerCase();
+    return status.includes('expired') || status.includes('kadaluarsa') || status.includes('kadaluwarsa');
+  };
 
-
-
-  // Active invoices = non-expired
+  // Active invoices = non-hidden
   const activeInvoices = (customerData?.invoices || []).filter((inv) => inv && !isExpiredInvoice(inv));
 
-  const filteredInvoices = activeInvoices.filter((invoice) => {
+  // Sort invoices: active non-expired unpaid first, expired unpaid next, paid last
+  const sortedInvoices = activeInvoices.slice().sort((a, b) => {
+    const aPaid = a.status_invoice === 'Lunas' || a.status_invoice?.toLowerCase().includes('lunas');
+    const bPaid = b.status_invoice === 'Lunas' || b.status_invoice?.toLowerCase().includes('lunas');
+    const aExp = isExpiredStatus(a);
+    const bExp = isExpiredStatus(b);
+
+    if (aPaid && !bPaid) return 1;
+    if (!aPaid && bPaid) return -1;
+
+    if (!aExp && bExp) return -1;
+    if (aExp && !bExp) return 1;
+
+    const aTime = a.tgl_jatuh_tempo ? new Date(a.tgl_jatuh_tempo).getTime() : 0;
+    const bTime = b.tgl_jatuh_tempo ? new Date(b.tgl_jatuh_tempo).getTime() : 0;
+    return bTime - aTime;
+  });
+
+  const filteredInvoices = sortedInvoices.filter((invoice) => {
     if (!invoice) return false;
     if (invoiceFilter === 'all') return true;
     if (invoiceFilter === 'unpaid') return invoice.status_invoice !== 'Lunas';
@@ -95,11 +116,13 @@ export default function PortalDashboardClient({ customerData }: Props) {
     return true;
   });
 
-  const totalUnpaid = activeInvoices
-    .filter((inv) => inv && inv.status_invoice !== 'Lunas')
-    .reduce((sum, inv) => sum + (inv.total_harga || 0), 0);
+  // Calculate unpaid stats only from active, non-expired unpaid invoices
+  const activeUnpaidInvoices = activeInvoices.filter(
+    (inv) => inv && inv.status_invoice !== 'Lunas' && !isExpiredStatus(inv)
+  );
 
-  const unpaidCount = activeInvoices.filter((inv) => inv && inv.status_invoice !== 'Lunas').length;
+  const totalUnpaid = activeUnpaidInvoices.reduce((sum, inv) => sum + (inv.total_harga || 0), 0);
+  const unpaidCount = activeUnpaidInvoices.length;
 
   const formatCurrency = (amount: number | null | undefined) => {
     const val = Number(amount || 0);
@@ -146,10 +169,12 @@ export default function PortalDashboardClient({ customerData }: Props) {
   const actualSubscriptionStatus = calculateSubscriptionStatus();
   const isActive = actualSubscriptionStatus.toLowerCase() === 'aktif';
 
-  // Find the nearest due date for unpaid invoices
-  const unpaidInvoices = activeInvoices.filter((inv) => inv && inv.status_invoice !== 'Lunas');
+  // Find the nearest due date for active unpaid invoices
+  const unpaidInvoices = activeUnpaidInvoices.length > 0
+    ? activeUnpaidInvoices
+    : activeInvoices.filter((inv) => inv && inv.status_invoice !== 'Lunas');
 
-  const nextDueInvoice = unpaidInvoices.sort((a, b) => {
+  const nextDueInvoice = unpaidInvoices.slice().sort((a, b) => {
     const aTime = a.tgl_jatuh_tempo ? new Date(a.tgl_jatuh_tempo).getTime() : 0;
     const bTime = b.tgl_jatuh_tempo ? new Date(b.tgl_jatuh_tempo).getTime() : 0;
     return aTime - bTime;
@@ -357,63 +382,81 @@ export default function PortalDashboardClient({ customerData }: Props) {
                     </div>
                   ) : (
                     <div className="portal-invoices-list">
-                      {filteredInvoices.map((invoice) => (
-                        <div key={invoice.id} className="portal-invoice-item">
-                          <div className="portal-invoice-left">
-                            <div className={`portal-invoice-icon ${invoice.status_invoice === 'Lunas' ? 'portal-invoice-icon--paid' : 'portal-invoice-icon--unpaid'}`}>
-                              <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a1 1 0 01-1-1V5a1 1 0 011-1h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a1 1 0 01-1 1z" />
-                              </svg>
-                            </div>
-                            <div>
-                              <h4 className="portal-invoice-num">{invoice.invoice_number}</h4>
-                              <div className="portal-invoice-meta">
-                                <span className="portal-invoice-meta-label">Jatuh Tempo</span>
-                                <p className="portal-invoice-meta-date">{formatDate(invoice.tgl_jatuh_tempo)}</p>
-                              </div>
-                            </div>
-                          </div>
+                      {filteredInvoices.map((invoice) => {
+                        const isPaid = invoice.status_invoice === 'Lunas' || invoice.status_invoice?.toLowerCase().includes('lunas');
+                        const isExpired = isExpiredStatus(invoice);
 
-                          <div className="portal-invoice-right">
-                            <div className="portal-invoice-amount-wrap">
-                              <span className="portal-invoice-amount">{formatCurrency(invoice.total_harga)}</span>
-                              <div className="portal-invoice-status-row">
-                                <div className={`portal-invoice-status-dot ${invoice.status_invoice === 'Lunas' ? 'portal-invoice-status-dot--paid' : 'portal-invoice-status-dot--unpaid'}`}></div>
-                                <span className={`portal-invoice-status-text ${invoice.status_invoice === 'Lunas' ? 'portal-invoice-status-text--paid' : 'portal-invoice-status-text--unpaid'}`}>
-                                  {invoice.status_invoice === 'Lunas' 
-                                    ? 'Sudah Bayar' 
-                                    : (invoice.status_invoice?.toLowerCase() === 'kadaluarsa' || invoice.status_invoice?.toLowerCase() === 'expired')
-                                      ? 'Terlambat' 
-                                      : 'Belum Bayar'}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="portal-invoice-actions">
-                              <button
-                                onClick={() => window.open(`/api/invoice/${invoice.id}/pdf`, '_blank')}
-                                className="portal-invoice-pdf-btn"
-                                title="Download PDF"
-                              >
-                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        return (
+                          <div key={invoice.id} className={`portal-invoice-item ${isExpired ? 'portal-invoice-item--expired' : ''}`}>
+                            <div className="portal-invoice-left">
+                              <div className={`portal-invoice-icon ${isPaid ? 'portal-invoice-icon--paid' : isExpired ? 'portal-invoice-icon--expired' : 'portal-invoice-icon--unpaid'}`}>
+                                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a1 1 0 01-1-1V5a1 1 0 011-1h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a1 1 0 01-1 1z" />
                                 </svg>
-                              </button>
+                              </div>
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
+                                  <h4 className="portal-invoice-num" style={{ margin: 0 }}>{invoice.invoice_number}</h4>
+                                  {!isPaid && !isExpired && (
+                                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.125rem 0.5rem', borderRadius: '0.375rem', backgroundColor: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }}>
+                                      Tagihan Aktif
+                                    </span>
+                                  )}
+                                  {isExpired && (
+                                    <span style={{ fontSize: '0.6875rem', fontWeight: 700, padding: '0.125rem 0.5rem', borderRadius: '0.375rem', backgroundColor: '#fffbe6', color: '#b45309', border: '1px solid #fef08a' }}>
+                                      Kadaluarsa
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="portal-invoice-meta">
+                                  <span className="portal-invoice-meta-label">Jatuh Tempo</span>
+                                  <p className="portal-invoice-meta-date">{formatDate(invoice.tgl_jatuh_tempo)}</p>
+                                </div>
+                              </div>
+                            </div>
 
-                              {invoice.status_invoice !== 'Lunas' && invoice.payment_link && (
-                                <a
-                                  href={invoice.payment_link}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="portal-invoice-pay-btn"
+                            <div className="portal-invoice-right">
+                              <div className="portal-invoice-amount-wrap">
+                                <span className="portal-invoice-amount">{formatCurrency(invoice.total_harga)}</span>
+                                <div className="portal-invoice-status-row">
+                                  <div className={`portal-invoice-status-dot ${isPaid ? 'portal-invoice-status-dot--paid' : isExpired ? 'portal-invoice-status-dot--expired' : 'portal-invoice-status-dot--unpaid'}`}></div>
+                                  <span className={`portal-invoice-status-text ${isPaid ? 'portal-invoice-status-text--paid' : isExpired ? 'portal-invoice-status-text--expired' : 'portal-invoice-status-text--unpaid'}`}>
+                                    {isPaid 
+                                      ? 'Sudah Bayar' 
+                                      : isExpired
+                                        ? 'Kadaluarsa' 
+                                        : 'Belum Bayar'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="portal-invoice-actions">
+                                <button
+                                  onClick={() => window.open(`/api/invoice/${invoice.id}/pdf`, '_blank')}
+                                  className="portal-invoice-pdf-btn"
+                                  title="Download PDF"
                                 >
-                                  Bayar Sekarang
-                                </a>
-                              )}
+                                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  </svg>
+                                </button>
+
+                                {!isPaid && invoice.payment_link && (
+                                  <a
+                                    href={invoice.payment_link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={isExpired ? "portal-invoice-pay-btn--expired" : "portal-invoice-pay-btn"}
+                                    title={isExpired ? "Link pembayaran ini sudah kadaluarsa (Gunakan jika diarahkan Admin/CS)" : "Bayar tagihan aktif"}
+                                  >
+                                    {isExpired ? 'Link Kadaluarsa' : 'Bayar Sekarang'}
+                                  </a>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -824,32 +867,51 @@ export default function PortalDashboardClient({ customerData }: Props) {
                       </svg>
                       <p>Belum ada riwayat pembayaran</p>
                     </div>
-                  ) : (
-                    activeInvoices.slice(0, 3).map((invoice) => (
-                      <div key={invoice.id} className="pm-history-item">
-                        <div className="pm-history-item-top">
-                          <div className={`pm-history-item-dot ${invoice.status_invoice === 'Lunas' ? 'pm-history-item-dot--paid' : 'pm-history-item-dot--unpaid'}`}></div>
-                          <span className="pm-history-item-num">{invoice.invoice_number}</span>
-                        </div>
-                        <div className="pm-history-item-body">
-                          <div>
-                            <span className="pm-history-item-amount">{formatCurrency(invoice.total_harga)}</span>
-                            <span className="pm-history-item-date">{formatDate(invoice.tgl_jatuh_tempo)}</span>
-                          </div>
-                          <div className="pm-history-item-actions">
-                            {invoice.status_invoice !== 'Lunas' && invoice.payment_link && (
-                              <a href={invoice.payment_link} target="_blank" rel="noopener noreferrer" className="pm-history-pay-btn">
-                                Bayar
-                              </a>
+                  ) : sortedInvoices.slice(0, 3).map((invoice) => {
+                      const isPaid = invoice.status_invoice === 'Lunas' || invoice.status_invoice?.toLowerCase().includes('lunas');
+                      const isExpired = isExpiredStatus(invoice);
+
+                      return (
+                        <div key={invoice.id} className="pm-history-item">
+                          <div className="pm-history-item-top">
+                            <div className={`pm-history-item-dot ${isPaid ? 'pm-history-item-dot--paid' : isExpired ? 'pm-history-item-dot--expired' : 'pm-history-item-dot--unpaid'}`}></div>
+                            <span className="pm-history-item-num">{invoice.invoice_number}</span>
+                            {!isPaid && !isExpired && (
+                              <span style={{ fontSize: '0.625rem', fontWeight: 700, padding: '0.1rem 0.375rem', borderRadius: '0.25rem', backgroundColor: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }}>
+                                Aktif
+                              </span>
                             )}
-                            {invoice.status_invoice === 'Lunas' && (
-                              <span className="pm-history-paid-badge">Lunas</span>
+                            {isExpired && (
+                              <span style={{ fontSize: '0.625rem', fontWeight: 700, padding: '0.1rem 0.375rem', borderRadius: '0.25rem', backgroundColor: '#fffbe6', color: '#b45309', border: '1px solid #fef08a' }}>
+                                Kadaluarsa
+                              </span>
                             )}
                           </div>
+                          <div className="pm-history-item-body">
+                            <div>
+                              <span className="pm-history-item-amount">{formatCurrency(invoice.total_harga)}</span>
+                              <span className="pm-history-item-date">{formatDate(invoice.tgl_jatuh_tempo)}</span>
+                            </div>
+                            <div className="pm-history-item-actions">
+                              {!isPaid && invoice.payment_link && (
+                                <a
+                                  href={invoice.payment_link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={isExpired ? "pm-history-pay-btn--expired" : "pm-history-pay-btn"}
+                                >
+                                  {isExpired ? 'Link Expired' : 'Bayar'}
+                                </a>
+                              )}
+                              {isPaid && (
+                                <span className="pm-history-paid-badge">Lunas</span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))
-                  )}
+                      );
+                    })
+                  }</div>
                 </div>
               </div>
             </div>
@@ -879,32 +941,55 @@ export default function PortalDashboardClient({ customerData }: Props) {
                 </div>
               ) : (
                 <div className="pm-history-list">
-                  {filteredInvoices.map((invoice) => (
-                    <div key={invoice.id} className="pm-history-item">
-                      <div className="pm-history-item-top">
-                        <div className={`pm-history-item-dot ${invoice.status_invoice === 'Lunas' ? 'pm-history-item-dot--paid' : 'pm-history-item-dot--unpaid'}`}></div>
-                        <span className="pm-history-item-num">{invoice.invoice_number}</span>
-                      </div>
-                      <div className="pm-history-item-body">
-                        <div>
-                          <span className="pm-history-item-amount">{formatCurrency(invoice.total_harga)}</span>
-                          <span className="pm-history-item-date">{formatDate(invoice.tgl_jatuh_tempo)}</span>
-                        </div>
-                        <div className="pm-history-item-actions">
-                          {invoice.status_invoice !== 'Lunas' && invoice.payment_link && (
-                            <a href={invoice.payment_link} target="_blank" rel="noopener noreferrer" className="pm-history-pay-btn">
-                              Bayar
-                            </a>
+                  {filteredInvoices.map((invoice) => {
+                    const isPaid = invoice.status_invoice === 'Lunas' || invoice.status_invoice?.toLowerCase().includes('lunas');
+                    const isExpired = isExpiredStatus(invoice);
+
+                    return (
+                      <div key={invoice.id} className="pm-history-item">
+                        <div className="pm-history-item-top">
+                          <div className={`pm-history-item-dot ${isPaid ? 'pm-history-item-dot--paid' : isExpired ? 'pm-history-item-dot--expired' : 'pm-history-item-dot--unpaid'}`}></div>
+                          <span className="pm-history-item-num">{invoice.invoice_number}</span>
+                          {!isPaid && !isExpired && (
+                            <span style={{ fontSize: '0.625rem', fontWeight: 700, padding: '0.1rem 0.375rem', borderRadius: '0.25rem', backgroundColor: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }}>
+                              Aktif
+                            </span>
                           )}
-                          <button onClick={() => window.open(`/api/invoice/${invoice.id}/pdf`, '_blank')} className="pm-history-pdf-btn">
-                            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                          </button>
+                          {isExpired && (
+                            <span style={{ fontSize: '0.625rem', fontWeight: 700, padding: '0.1rem 0.375rem', borderRadius: '0.25rem', backgroundColor: '#fffbe6', color: '#b45309', border: '1px solid #fef08a' }}>
+                              Kadaluarsa
+                            </span>
+                          )}
+                        </div>
+                        <div className="pm-history-item-body">
+                          <div>
+                            <span className="pm-history-item-amount">{formatCurrency(invoice.total_harga)}</span>
+                            <span className="pm-history-item-date">{formatDate(invoice.tgl_jatuh_tempo)}</span>
+                          </div>
+                          <div className="pm-history-item-actions">
+                            {!isPaid && invoice.payment_link && (
+                              <a
+                                href={invoice.payment_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={isExpired ? "pm-history-pay-btn--expired" : "pm-history-pay-btn"}
+                              >
+                                {isExpired ? 'Link Expired' : 'Bayar'}
+                              </a>
+                            )}
+                            {isPaid && (
+                              <span className="pm-history-paid-badge">Lunas</span>
+                            )}
+                            <button onClick={() => window.open(`/api/invoice/${invoice.id}/pdf`, '_blank')} className="pm-history-pdf-btn">
+                              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

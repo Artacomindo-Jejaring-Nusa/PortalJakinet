@@ -150,7 +150,7 @@ class _HistoryTabState extends State<HistoryTab> {
                                       isPaid 
                                           ? 'Lunas' 
                                           : (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
-                                              ? 'Terlambat' 
+                                              ? 'Kadaluarsa' 
                                               : invoice.statusInvoice,
                                       style: TextStyle(
                                         fontSize: 11,
@@ -158,7 +158,7 @@ class _HistoryTabState extends State<HistoryTab> {
                                         color: isPaid
                                             ? Colors.green.shade700
                                             : (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
-                                                ? Colors.orange.shade700
+                                                ? Colors.amber.shade800
                                                 : Colors.red.shade700,
                                       ),
                                     ),
@@ -210,11 +210,28 @@ class _HistoryTabState extends State<HistoryTab> {
                                         ElevatedButton(
                                           onPressed: () => _openUrl(invoice.paymentLink!),
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: primaryColor,
-                                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                            backgroundColor: (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
+                                                ? Colors.amber.shade100
+                                                : primaryColor,
+                                            foregroundColor: (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
+                                                ? Colors.amber.shade900
+                                                : Colors.white,
+                                            elevation: (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired') ? 0 : 2,
+                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                             minimumSize: Size.zero,
                                           ),
-                                          child: const Text('Bayar', style: TextStyle(fontSize: 13, color: Colors.white)),
+                                          child: Text(
+                                            (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
+                                                ? 'Link Expired'
+                                                : 'Bayar',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: (invoice.statusInvoice.toLowerCase() == 'kadaluarsa' || invoice.statusInvoice.toLowerCase() == 'expired')
+                                                  ? Colors.amber.shade900
+                                                  : Colors.white,
+                                            ),
+                                          ),
                                         ),
                                       ],
                                     ],
