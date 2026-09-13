@@ -48,11 +48,30 @@ class _HistoryTabState extends State<HistoryTab> {
     final invoices = provider.activeInvoices;
     final primaryColor = Theme.of(context).primaryColor;
 
+    int getInvoiceRank(Invoice inv) {
+      final status = inv.statusInvoice.toLowerCase();
+      final isPaid = status == 'lunas' || status.contains('lunas') || status.contains('paid');
+      final isExpired = status.contains('expired') || status.contains('kadaluarsa') || status.contains('kadaluwarsa');
+      final isCancelled = status.contains('batal') || status.contains('cancel');
+
+      if (!isPaid && !isExpired && !isCancelled) return 1;
+      if (isPaid) return 2;
+      return 3;
+    }
+
     final filtered = invoices.where((invoice) {
-      if (_filter == 'unpaid') return invoice.statusInvoice != 'Lunas';
-      if (_filter == 'paid') return invoice.statusInvoice == 'Lunas';
+      if (_filter == 'unpaid') return invoice.statusInvoice != 'Lunas' && !invoice.statusInvoice.toLowerCase().contains('lunas');
+      if (_filter == 'paid') return invoice.statusInvoice == 'Lunas' || invoice.statusInvoice.toLowerCase().contains('lunas');
       return true;
-    }).toList();
+    }).toList()..sort((a, b) {
+      final rankA = getInvoiceRank(a);
+      final rankB = getInvoiceRank(b);
+      if (rankA != rankB) return rankA.compareTo(rankB);
+
+      if (a.tglJatuhTempo.isEmpty) return 1;
+      if (b.tglJatuhTempo.isEmpty) return -1;
+      return b.tglJatuhTempo.compareTo(a.tglJatuhTempo);
+    });
 
     return Padding(
       padding: const EdgeInsets.all(16.0),

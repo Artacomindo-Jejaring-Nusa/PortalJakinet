@@ -60,6 +60,16 @@ export default function PortalDashboardClient({ customerData }: Props) {
     }
   };
 
+  // Helper to identify active unpaid invoice ('Belum Bayar')
+  const isUnpaidActiveInvoice = (inv: any) => {
+    if (!inv) return false;
+    const status = (inv.status_invoice || '').toLowerCase();
+    const isPaid = status === 'lunas' || status.includes('lunas') || status.includes('paid');
+    const isCancelled = status.includes('batal') || status.includes('cancel');
+    const isExpired = status.includes('expired') || status.includes('kadaluarsa') || status.includes('kadaluwarsa');
+    return !isPaid && !isCancelled && !isExpired;
+  };
+
   // All invoices except cancelled ones
   const allInvoices = (customerData?.invoices || []).filter((inv) => {
     if (!inv) return false;
@@ -67,30 +77,45 @@ export default function PortalDashboardClient({ customerData }: Props) {
     return !status.includes('batal') && !status.includes('cancel');
   });
 
-  // All unpaid invoices sorted newest month first (e.g. September 2026 before June 2026)
+  // All active unpaid invoices ('Belum Bayar') sorted newest month first
   const allUnpaidInvoices = allInvoices
-    .filter((inv) => inv && inv.status_invoice !== 'Lunas' && !inv.status_invoice?.toLowerCase().includes('lunas'))
+    .filter(isUnpaidActiveInvoice)
     .sort((a, b) => {
       const aTime = a.tgl_jatuh_tempo ? new Date(a.tgl_jatuh_tempo).getTime() : 0;
       const bTime = b.tgl_jatuh_tempo ? new Date(b.tgl_jatuh_tempo).getTime() : 0;
       return bTime - aTime;
     });
 
-  // Current active unpaid bill = newest unpaid invoice (Tagihan Berjalan)
-  const currentActiveBill = allUnpaidInvoices[0];
+  // Current active unpaid bill = newest active 'Belum Bayar' invoice (Tagihan Berjalan)
+  // If user paid all active bills or has only expired ones, currentActiveBill is null.
+  const currentActiveBill = allUnpaidInvoices[0] || null;
   const nextDueInvoice = currentActiveBill;
 
   // Stats display current active bill amount & count (Tagihan Berjalan)
   const totalUnpaid = currentActiveBill ? (currentActiveBill.total_harga || 0) : 0;
   const unpaidCount = currentActiveBill ? 1 : 0;
 
-  // Sort all invoices for display: unpaid first (newest month first), paid last (newest month first)
-  const sortedInvoices = allInvoices.slice().sort((a, b) => {
-    const aPaid = a.status_invoice === 'Lunas' || a.status_invoice?.toLowerCase().includes('lunas');
-    const bPaid = b.status_invoice === 'Lunas' || b.status_invoice?.toLowerCase().includes('lunas');
+  // Rank invoices for sorting:
+  // Rank 1: Active Unpaid ('Belum Bayar') -> Top of list
+  // Rank 2: Paid ('Lunas') -> Middle (newest month first)
+  // Rank 3: Expired / Kadaluarsa -> Bottom of list (history)
+  const getInvoiceRank = (inv: any) => {
+    if (!inv) return 99;
+    const status = (inv.status_invoice || '').toLowerCase();
+    const isPaid = status === 'lunas' || status.includes('lunas') || status.includes('paid');
+    const isCancelled = status.includes('batal') || status.includes('cancel');
+    const isExpired = status.includes('expired') || status.includes('kadaluarsa') || status.includes('kadaluwarsa');
 
-    if (aPaid && !bPaid) return 1;
-    if (!aPaid && bPaid) return -1;
+    if (!isPaid && !isExpired && !isCancelled) return 1;
+    if (isPaid) return 2;
+    return 3;
+  };
+
+  const sortedInvoices = allInvoices.slice().sort((a, b) => {
+    const rankA = getInvoiceRank(a);
+    const rankB = getInvoiceRank(b);
+
+    if (rankA !== rankB) return rankA - rankB;
 
     const aTime = a.tgl_jatuh_tempo ? new Date(a.tgl_jatuh_tempo).getTime() : 0;
     const bTime = b.tgl_jatuh_tempo ? new Date(b.tgl_jatuh_tempo).getTime() : 0;
@@ -100,8 +125,14 @@ export default function PortalDashboardClient({ customerData }: Props) {
   const filteredInvoices = sortedInvoices.filter((invoice) => {
     if (!invoice) return false;
     if (invoiceFilter === 'all') return true;
-    if (invoiceFilter === 'unpaid') return invoice.status_invoice !== 'Lunas';
-    if (invoiceFilter === 'paid') return invoice.status_invoice === 'Lunas';
+    if (invoiceFilter === 'unpaid') {
+      const status = (invoice.status_invoice || '').toLowerCase();
+      return status !== 'lunas' && !status.includes('lunas');
+    }
+    if (invoiceFilter === 'paid') {
+      const status = (invoice.status_invoice || '').toLowerCase();
+      return status === 'lunas' || status.includes('lunas');
+    }
     return true;
   });
 
@@ -112,7 +143,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
     const isPaid = status === 'lunas' || status.includes('lunas') || status.includes('paid');
     const isCancelled = status.includes('batal') || status.includes('cancel');
     const isExpiredInDb = status.includes('expired') || status.includes('kadaluarsa') || status.includes('kadaluwarsa');
-    const isCurrentActive = !isPaid && currentActiveBill && invoice.id === currentActiveBill.id;
+    const isCurrentActive = !isPaid && !isExpiredInDb && !isCancelled && currentActiveBill && invoice.id === currentActiveBill.id;
     const hasLink = !!invoice.payment_link && invoice.payment_link !== '#' && invoice.payment_link !== '';
 
     if (isPaid) {
@@ -132,53 +163,53 @@ export default function PortalDashboardClient({ customerData }: Props) {
       };
     }
 
-    if (isCurrentActive) {
+    if (isExpiredInDb || isCancelled) {
       return {
-        type: 'current_active',
-        label: isExpiredInDb ? 'Terlambat' : 'Belum Bayar',
-        badgeText: 'Tagihan Berjalan',
-        badgeBg: '#eff6ff',
-        badgeColor: '#2563eb',
-        badgeBorder: '#bfdbfe',
-        dotClass: isExpiredInDb ? 'portal-invoice-status-dot--expired' : 'portal-invoice-status-dot--unpaid',
-        textClass: isExpiredInDb ? 'portal-invoice-status-text--expired' : 'portal-invoice-status-text--unpaid',
-        iconClass: isExpiredInDb ? 'portal-invoice-icon--expired' : 'portal-invoice-icon--unpaid',
-        buttonText: 'Bayar Sekarang',
-        buttonLink: hasLink ? invoice.payment_link : brandWhatsapp,
-        buttonClass: 'portal-invoice-pay-btn',
-      };
-    }
-
-    if (hasLink && !isExpiredInDb) {
-      return {
-        type: 'overdue_active',
-        label: 'Terlambat',
-        badgeText: 'Terlambat',
+        type: 'expired',
+        label: isCancelled ? 'Dibatalkan' : 'Kadaluarsa',
+        badgeText: isCancelled ? 'Dibatalkan' : 'Kadaluarsa',
         badgeBg: '#fffbe6',
         badgeColor: '#b45309',
         badgeBorder: '#fef08a',
         dotClass: 'portal-invoice-status-dot--expired',
         textClass: 'portal-invoice-status-text--expired',
         iconClass: 'portal-invoice-icon--expired',
+        buttonText: 'Link Kadaluarsa',
+        buttonLink: brandWhatsapp,
+        buttonClass: 'portal-invoice-pay-btn--expired',
+      };
+    }
+
+    if (isCurrentActive) {
+      return {
+        type: 'current_active',
+        label: 'Belum Bayar',
+        badgeText: 'Tagihan Berjalan',
+        badgeBg: '#eff6ff',
+        badgeColor: '#2563eb',
+        badgeBorder: '#bfdbfe',
+        dotClass: 'portal-invoice-status-dot--unpaid',
+        textClass: 'portal-invoice-status-text--unpaid',
+        iconClass: 'portal-invoice-icon--unpaid',
         buttonText: 'Bayar Sekarang',
-        buttonLink: invoice.payment_link,
+        buttonLink: hasLink ? invoice.payment_link : brandWhatsapp,
         buttonClass: 'portal-invoice-pay-btn',
       };
     }
 
     return {
-      type: 'expired',
-      label: isCancelled ? 'Dibatalkan' : 'Kadaluarsa',
-      badgeText: isCancelled ? 'Dibatalkan' : 'Kadaluarsa',
+      type: 'overdue_active',
+      label: 'Terlambat',
+      badgeText: 'Terlambat',
       badgeBg: '#fffbe6',
       badgeColor: '#b45309',
       badgeBorder: '#fef08a',
       dotClass: 'portal-invoice-status-dot--expired',
       textClass: 'portal-invoice-status-text--expired',
       iconClass: 'portal-invoice-icon--expired',
-      buttonText: 'Link Kadaluarsa',
-      buttonLink: brandWhatsapp,
-      buttonClass: 'portal-invoice-pay-btn--expired',
+      buttonText: 'Bayar Sekarang',
+      buttonLink: hasLink ? invoice.payment_link : brandWhatsapp,
+      buttonClass: 'portal-invoice-pay-btn',
     };
   };
 

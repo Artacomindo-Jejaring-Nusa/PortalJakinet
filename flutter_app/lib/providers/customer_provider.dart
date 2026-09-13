@@ -154,7 +154,13 @@ class CustomerProvider with ChangeNotifier {
   List<Invoice> get activeInvoices => allInvoices;
 
   Invoice? get currentActiveBill {
-    final unpaid = allInvoices.where((inv) => inv.statusInvoice != 'Lunas' && !inv.statusInvoice.toLowerCase().contains('lunas')).toList();
+    final unpaid = allInvoices.where((inv) {
+      final status = inv.statusInvoice.toLowerCase();
+      final isPaid = status == 'lunas' || status.contains('lunas') || status.contains('paid');
+      final isExpired = status.contains('expired') || status.contains('kadaluarsa') || status.contains('kadaluwarsa');
+      final isCancelled = status.contains('batal') || status.contains('cancel');
+      return !isPaid && !isExpired && !isCancelled;
+    }).toList();
     if (unpaid.isEmpty) return null;
     unpaid.sort((a, b) {
       if (a.tglJatuhTempo.isEmpty) return 1;
