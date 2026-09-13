@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/customer_provider.dart';
+import '../models/invoice.dart';
 
 class HistoryTab extends StatefulWidget {
   const HistoryTab({super.key});
