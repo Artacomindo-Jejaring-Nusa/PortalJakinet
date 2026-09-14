@@ -152,18 +152,63 @@ function generateInvoiceHTML(invoice: any, customerData: any, logoBase64: string
     }
 
     body {
-      background: #f1f5f9;
-      padding: 40px 20px;
+      background: #f8fafc;
+      padding: 24px 16px;
       color: #1e293b;
       line-height: 1.5;
+    }
+
+    .top-action-bar {
+      max-width: 800px;
+      margin: 0 auto 16px auto;
+    }
+
+    .top-bar-content {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .top-bar-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      border: none;
+      transition: all 0.2s ease;
+    }
+
+    .top-bar-btn.print-btn {
+      background: #2563eb;
+      color: white;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+    }
+    .top-bar-btn.print-btn:hover {
+      background: #1d4ed8;
+    }
+
+    .top-bar-btn.pay-btn {
+      background: #16a34a;
+      color: white;
+      box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25);
+    }
+    .top-bar-btn.pay-btn:hover {
+      background: #15803d;
     }
 
     .invoice-container {
       max-width: 800px;
       margin: 0 auto;
       background: white;
-      padding: 40px;
-      border-radius: 4px;
+      padding: 36px 40px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
       box-shadow: 0 4px 20px rgba(0,0,0,0.05);
       position: relative;
       overflow: hidden;
@@ -183,31 +228,39 @@ function generateInvoiceHTML(invoice: any, customerData: any, logoBase64: string
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 30px;
+      margin-bottom: 24px;
+      gap: 16px;
     }
 
     .brand-section {
       display: flex;
       align-items: center;
-      gap: 15px;
+      gap: 14px;
     }
 
     .logo-box {
-      width: 56px;
-      height: 56px;
-      border-radius: 8px;
+      width: 52px;
+      height: 52px;
+      border-radius: 10px;
       overflow: hidden;
       flex-shrink: 0;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: #dc2626;
     }
 
     .logo-box img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
     }
 
     .company-info h1 {
-      font-size: 24px;
+      font-size: 22px;
       font-weight: 800;
       color: #b91c1c;
       letter-spacing: -0.02em;
@@ -234,24 +287,24 @@ function generateInvoiceHTML(invoice: any, customerData: any, logoBase64: string
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 20px;
-      margin-bottom: 30px;
+      margin-bottom: 24px;
     }
 
     .info-card {
       background: #f8fafc;
       border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 20px;
+      border-radius: 10px;
+      padding: 18px;
     }
 
     .info-card h3 {
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: #ef4444;
-      margin-bottom: 15px;
-      padding-bottom: 8px;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
       border-bottom: 2px solid #ef4444;
       display: inline-block;
     }
@@ -260,10 +313,15 @@ function generateInvoiceHTML(invoice: any, customerData: any, logoBase64: string
       display: flex;
       margin-bottom: 8px;
       font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .info-row:last-child {
+      margin-bottom: 0;
     }
 
     .info-label {
-      flex: 0 0 100px;
+      flex: 0 0 105px;
       color: #64748b;
       font-weight: 500;
     }
@@ -272,20 +330,21 @@ function generateInvoiceHTML(invoice: any, customerData: any, logoBase64: string
       flex: 1;
       font-weight: 700;
       color: #1e293b;
+      word-break: break-word;
     }
 
     .items-table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 25px;
+      margin-bottom: 24px;
     }
 
     .items-table th {
       text-align: left;
       background: #f8fafc;
-      padding: 10px 15px;
+      padding: 12px 16px;
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: #475569;
@@ -294,7 +353,7 @@ function generateInvoiceHTML(invoice: any, customerData: any, logoBase64: string
     }
 
     .items-table td {
-      padding: 15px;
+      padding: 14px 16px;
       font-size: 14px;
       border-bottom: 1px solid #f1f5f9;
     }
@@ -308,7 +367,7 @@ function generateInvoiceHTML(invoice: any, customerData: any, logoBase64: string
       flex-direction: column;
       align-items: flex-end;
       gap: 8px;
-      margin-bottom: 30px;
+      margin-bottom: 24px;
     }
 
     .summary-row {
@@ -320,7 +379,7 @@ function generateInvoiceHTML(invoice: any, customerData: any, logoBase64: string
     }
 
     .summary-row.total {
-      margin-top: 5px;
+      margin-top: 4px;
       padding-top: 10px;
       border-top: 2px solid #e2e8f0;
       color: #1e293b;
@@ -333,7 +392,7 @@ function generateInvoiceHTML(invoice: any, customerData: any, logoBase64: string
       border: 1px solid #fef3c7;
       border-radius: 8px;
       padding: 15px;
-      margin-bottom: 25px;
+      margin-bottom: 20px;
     }
 
     .notes-box strong {
@@ -350,24 +409,25 @@ function generateInvoiceHTML(invoice: any, customerData: any, logoBase64: string
 
     .payment-status-overlay {
       position: absolute;
-      top: 120px;
-      right: 40px;
-      transform: rotate(-15deg);
-      border: 5px solid ${statusColor};
+      top: 90px;
+      right: 24px;
+      transform: rotate(-10deg);
+      border: 4px solid ${statusColor};
       color: ${statusColor};
-      padding: 8px 24px;
-      font-size: 30px;
+      padding: 6px 18px;
+      font-size: 24px;
       font-weight: 900;
       text-transform: uppercase;
-      opacity: 0.15;
+      opacity: 0.2;
       pointer-events: none;
-      border-radius: 12px;
-      letter-spacing: 4px;
+      border-radius: 10px;
+      letter-spacing: 3px;
+      z-index: 1;
     }
 
     .footer {
       text-align: center;
-      margin-top: 40px;
+      margin-top: 30px;
       color: #64748b;
       font-size: 12px;
     }
@@ -394,6 +454,77 @@ function generateInvoiceHTML(invoice: any, customerData: any, logoBase64: string
       margin-bottom: 15px;
     }
 
+    /* ================= RESPONSIVE DESIGN (MOBILE & TABLET) ================= */
+    @media (max-width: 640px) {
+      body {
+        padding: 10px 8px;
+      }
+      .top-action-bar {
+        margin-bottom: 10px;
+      }
+      .top-bar-content {
+        justify-content: center;
+        width: 100%;
+      }
+      .top-bar-btn {
+        flex: 1;
+        justify-content: center;
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+      .invoice-container {
+        padding: 20px 14px;
+        border-radius: 10px;
+      }
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .secondary-logo {
+        display: none;
+      }
+      .company-info h1 {
+        font-size: 19px;
+      }
+      .company-info p {
+        font-size: 12px;
+      }
+      .info-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .info-card {
+        padding: 14px 12px;
+      }
+      .info-row {
+        font-size: 12px;
+      }
+      .info-label {
+        flex: 0 0 95px;
+      }
+      .payment-status-overlay {
+        top: 50px;
+        right: 12px;
+        font-size: 16px;
+        padding: 4px 10px;
+        border-width: 3px;
+        letter-spacing: 2px;
+      }
+      .items-table th, .items-table td {
+        padding: 10px 8px;
+        font-size: 12px;
+      }
+      .summary-row {
+        width: 100%;
+        max-width: 260px;
+        font-size: 13px;
+      }
+      .summary-row.total {
+        font-size: 16px;
+      }
+    }
+
     @media print {
       @page {
         size: A4;
@@ -411,17 +542,37 @@ function generateInvoiceHTML(invoice: any, customerData: any, logoBase64: string
         width: 100%;
         max-width: none;
         border-radius: 0;
+        border: none;
       }
       .invoice-container::before {
         display: none;
       }
       .no-print {
-        display: none;
+        display: none !important;
       }
     }
   </style>
 </head>
 <body>
+  <div class="top-action-bar no-print">
+    <div class="top-bar-content">
+      <button class="top-bar-btn print-btn" onclick="window.print()">
+        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+        </svg>
+        <span>Cetak / Simpan PDF</span>
+      </button>
+      ${!isLunas && invoice.payment_link ? `
+      <a href="${invoice.payment_link}" target="_blank" class="top-bar-btn pay-btn">
+        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+        </svg>
+        <span>Bayar Sekarang</span>
+      </a>
+      ` : ''}
+    </div>
+  </div>
+
   <div class="invoice-container">
     <div class="payment-status-overlay">${invoice.status_invoice}</div>
 
@@ -541,16 +692,6 @@ function generateInvoiceHTML(invoice: any, customerData: any, logoBase64: string
       <p>Untuk pertanyaan, hubungi: 082223616884 | sales@ajnusa.com</p>
     </div>
   </div>
-
-  <script>
-    window.onload = function() {
-      if (!window.location.search.includes('noprint')) {
-        setTimeout(function() {
-          window.print();
-        }, 800);
-      }
-    };
-  </script>
 </body>
 </html>`;
 }
