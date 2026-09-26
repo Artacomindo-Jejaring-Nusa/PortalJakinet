@@ -9,6 +9,25 @@
       "client_info": {
         "mobilesdk_app_id": "1:945994586639:android:106decc0562fb9abe7217a",
         "android_client_info": {
+          "package_name": "com.ajnusa.flutter_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApFKylYpoe9Cudtn4WK1sv0xz0PHC8TDI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:945994586639:android:106decc0562fb9abe7217a",
+        "android_client_info": {
           "package_name": "com.ajnusa.portal"
         }
       },
