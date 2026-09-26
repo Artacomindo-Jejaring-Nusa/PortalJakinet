@@ -1,8 +1,10 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import '../models/customer_data.dart';
 import '../models/invoice.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
+import '../services/fcm_service.dart';
 import '../config/constants.dart';
 
 class CustomerProvider with ChangeNotifier {
@@ -11,14 +13,22 @@ class CustomerProvider with ChangeNotifier {
 
   CustomerData? _customerData;
   bool _isLoading = false;
+  bool _isInitialized = false;
   String? _error;
 
   CustomerData? get customerData => _customerData;
   bool get isLoading => _isLoading;
+  bool get isInitialized => _isInitialized;
   String? get error => _error;
 
   CustomerProvider() {
     _init();
+    
+    // Listen for FCM notification arrival to automatically auto-refresh data
+    FCMService().onMessageReceived = () {
+      print('🔄 FCM Notification received -> Auto refreshing dashboard data in real-time...');
+      refresh(showLoading: false);
+    };
   }
 
   Future<void> _init() async {
@@ -26,40 +36,73 @@ class CustomerProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      _customerData = await _authService.tryAutoLogin();
+      final prefs = await SharedPreferences.getInstance();
+      final role = prefs.getString('session_role');
+      final identifier = prefs.getString('session_identifier');
+
+      if (role == 'customer' && identifier != null && identifier.isNotEmpty) {
+        _customerData = await _apiService.verifyCustomer(identifier);
+        if (_customerData != null) {
+          _registerFCMToken();
+        }
+      }
     } catch (e) {
-      _error = 'Auto-login failed';
+      _error = 'Auto-login failed: $e';
     } finally {
+      _isInitialized = true;
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // Login handler
-  Future<bool> login(String identifier) async {
+  // Register FCM Token helper
+  Future<void> _registerFCMToken() async {
+    if (_customerData == null) return;
+    final phone = _customerData!.pelanggan.noTelp;
+    final email = _customerData!.pelanggan.email;
+    final identifier = phone.isNotEmpty ? phone : email;
+
+    if (identifier.isNotEmpty) {
+      await FCMService().sendTokenToBackend(identifier: identifier);
+    }
+  }
+
+  // Auto-detect role login handler
+  Future<LoginResult> loginAutoDetect(String identifier) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final result = await _authService.login(identifier);
-      if (result != null) {
-        _customerData = result;
+      final res = await _authService.loginAutoDetect(identifier);
+      if (res.isTechnician && res.technicianUser != null) {
         _isLoading = false;
         notifyListeners();
-        return true;
+        return res;
+      } else if (res.customerData != null) {
+        _customerData = res.customerData;
+        _registerFCMToken();
+        _isLoading = false;
+        notifyListeners();
+        return res;
       } else {
-        _error = 'Data tidak ditemukan. Pastikan email atau nomor telepon terdaftar.';
+        _error = 'Data tidak ditemukan. Pastikan email atau nomor WhatsApp terdaftar.';
         _isLoading = false;
         notifyListeners();
-        return false;
+        return res;
       }
     } catch (e) {
       _error = 'Terjadi kesalahan jaringan. Silakan coba lagi.';
       _isLoading = false;
       notifyListeners();
-      return false;
+      return LoginResult(isTechnician: false);
     }
+  }
+
+  // Legacy Customer login handler
+  Future<bool> login(String identifier) async {
+    final res = await loginAutoDetect(identifier);
+    return res.isSuccess && !res.isTechnician;
   }
 
   // Logout handler
@@ -73,15 +116,19 @@ class CustomerProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Refresh handler
-  Future<void> refresh() async {
+  // Refresh handler (supports silent background refresh on FCM notification)
+  Future<void> refresh({bool showLoading = true}) async {
     if (_customerData == null) return;
-    _isLoading = true;
-    notifyListeners();
+    
+    if (showLoading) {
+      _isLoading = true;
+      notifyListeners();
+    }
 
     try {
       final phone = _customerData!.pelanggan.noTelp;
       final email = _customerData!.pelanggan.email;
+      final customerId = _customerData!.pelanggan.id;
       
       CustomerData? refreshed;
       if (email.isNotEmpty) {
@@ -89,6 +136,8 @@ class CustomerProvider with ChangeNotifier {
       } else if (phone.isNotEmpty) {
         refreshed = await _apiService.getCustomerByPhone(phone);
       }
+      
+      refreshed ??= await _apiService.getCustomerDirectLookup(customerId.toString());
 
       if (refreshed != null) {
         _customerData = refreshed;
@@ -96,7 +145,9 @@ class CustomerProvider with ChangeNotifier {
     } catch (e) {
       print('Refresh failed: $e');
     } finally {
-      _isLoading = false;
+      if (showLoading) {
+        _isLoading = false;
+      }
       notifyListeners();
     }
   }
@@ -180,3 +231,4 @@ class CustomerProvider with ChangeNotifier {
 
   Invoice? get nextDueInvoice => currentActiveBill;
 }
+

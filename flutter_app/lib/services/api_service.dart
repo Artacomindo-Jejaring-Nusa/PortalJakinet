@@ -5,6 +5,9 @@ import '../models/pelanggan.dart';
 import '../models/langganan.dart';
 import '../models/invoice.dart';
 import '../models/customer_data.dart';
+import '../models/technician_user.dart';
+import '../models/installation_task.dart';
+import '../models/technician_ticket.dart';
 
 class ApiService {
   String? _adminToken;
@@ -57,7 +60,7 @@ class ApiService {
     try {
       final token = await _getAdminToken();
       final response = await http.get(
-        Uri.parse('${AppConstants.apiBaseUrl}/pelanggan/?search=${Uri.encodeComponent(query)}'),
+        Uri.parse('${AppConstants.apiBaseUrl}/pelanggan?search=${Uri.encodeComponent(query)}'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -203,7 +206,7 @@ class ApiService {
       final token = await _getAdminToken();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final response = await http.get(
-        Uri.parse('${AppConstants.apiBaseUrl}/langganan/?pelanggan_id=$pelangganId&_t=$timestamp'),
+        Uri.parse('${AppConstants.apiBaseUrl}/langganan?pelanggan_id=$pelangganId&_t=$timestamp'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -238,7 +241,7 @@ class ApiService {
       final token = await _getAdminToken();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
 
-      final endpoints = ['/invoices/', '/tagihan/', '/invoice/'];
+      final endpoints = ['/invoices', '/tagihan', '/invoice'];
       List<dynamic> rawInvoices = [];
 
       for (var endpoint in endpoints) {
@@ -353,4 +356,182 @@ class ApiService {
       return getCustomerByPhone(identifier);
     }
   }
+
+  // ── TECHNICIAN ENDPOINTS ──────────────────────────────────────────
+
+  // Check if identifier belongs to a Technician user (Role: Teknisi)
+  Future<TechnicianUser?> verifyTechnicianUser(String identifier) async {
+    try {
+      final token = await _getAdminToken();
+      final normalizedId = _normalizePhone(identifier);
+      final isEmail = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(identifier);
+
+      final response = await http.get(
+        Uri.parse('${AppConstants.apiBaseUrl}/users'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'X-API-Key': token,
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final body = json.decode(response.body);
+        final list = _extractArray(body);
+
+        for (var item in list) {
+          if (item is Map<String, dynamic>) {
+            final itemEmail = (item['email'] ?? '').toString().toLowerCase();
+            final rawPhone = (item['phone_no'] ?? item['whatsapp'] ?? item['no_telp'] ?? item['phone'] ?? '').toString();
+            final itemPhone = _normalizePhone(rawPhone);
+
+            String roleName = '';
+            if (item['role'] != null) {
+              if (item['role'] is Map) {
+                roleName = (item['role']['name'] ?? item['role']['nama'] ?? '').toString().toLowerCase();
+              } else {
+                roleName = item['role'].toString().toLowerCase();
+              }
+            }
+
+            final matchIdent = (isEmail && itemEmail == identifier.toLowerCase()) ||
+                (!isEmail && itemPhone == normalizedId) ||
+                (item['id'].toString() == identifier);
+
+            if (matchIdent) {
+              if (roleName.contains('teknisi') || roleName.contains('technician') || roleName.contains('admin') || roleName.contains('staff') || roleName.isNotEmpty) {
+                return TechnicianUser.fromJson(item);
+              }
+            }
+          }
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error in verifyTechnicianUser: $e');
+      return null;
+    }
+  }
+
+  // Fetch New Installation Queue List
+  Future<List<InstallationTask>> getInstallationQueue() async {
+    try {
+      final token = await _getAdminToken();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+      final endpoints = [
+        '/pelanggan?limit=100&_t=$timestamp',
+      ];
+
+      List<InstallationTask> tasks = [];
+      for (var ep in endpoints) {
+        final response = await http.get(
+          Uri.parse('${AppConstants.apiBaseUrl}$ep'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ).timeout(const Duration(seconds: 8));
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          final list = _extractArray(data);
+          if (list.isNotEmpty) {
+            tasks = list.map((item) => InstallationTask.fromJson(item)).toList();
+            break;
+          }
+        }
+      }
+
+      return tasks;
+    } catch (e) {
+      print('Error fetching installation queue: $e');
+      return [];
+    }
+  }
+
+  // Fetch Technician Support Tickets List
+  Future<List<TechnicianTicket>> getTechnicianTickets() async {
+    try {
+      final token = await _getAdminToken();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+      final endpoints = [
+        '/trouble-tickets?limit=100&_t=$timestamp',
+      ];
+
+      List<TechnicianTicket> tickets = [];
+      for (var ep in endpoints) {
+        final response = await http.get(
+          Uri.parse('${AppConstants.apiBaseUrl}$ep'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ).timeout(const Duration(seconds: 8));
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          final list = _extractArray(data);
+          if (list.isNotEmpty) {
+            tickets = list.map((item) => TechnicianTicket.fromJson(item)).toList();
+            break;
+          }
+        }
+      }
+
+      return tickets;
+    } catch (e) {
+      print('Error fetching technician tickets: $e');
+      return [];
+    }
+  }
+
+  // Update Ticket Status & Add Action Note
+  Future<bool> updateTicketStatus(int ticketId, String status, String note) async {
+    try {
+      final token = await _getAdminToken();
+      final response = await http.post(
+        Uri.parse('${AppConstants.apiBaseUrl}/trouble-tickets/$ticketId/action'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'status': status,
+          'notes': note,
+          'action_type': 'Update Status oleh Teknisi',
+        }),
+      );
+
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      print('Error updating ticket status: $e');
+      return false;
+    }
+  }
+
+  // Update Installation Task Status
+  Future<bool> updateInstallationStatus(int pelangganId, String status, String note) async {
+    try {
+      final token = await _getAdminToken();
+      final response = await http.post(
+        Uri.parse('${AppConstants.apiBaseUrl}/pelanggan/$pelangganId/status'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'status_instalasi': status,
+          'notes': note,
+        }),
+      );
+
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      print('Error updating installation status: $e');
+      return false;
+    }
+  }
 }
+

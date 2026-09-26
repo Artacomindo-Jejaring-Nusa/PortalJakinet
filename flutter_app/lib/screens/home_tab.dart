@@ -3,10 +3,91 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/customer_provider.dart';
+import '../widgets/app_tutorial_overlay.dart';
 
-class HomeTab extends StatelessWidget {
+class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
+
+  @override
+  State<HomeTab> createState() => HomeTabState();
+}
+
+class HomeTabState extends State<HomeTab> {
+  // GlobalKeys for Tutorial Bar
+  final GlobalKey _keyProfileCard = GlobalKey();
+  final GlobalKey _keyBillingCard = GlobalKey();
+  final GlobalKey _keySpeedCard = GlobalKey();
+  final GlobalKey _keyQuickActions = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkFirstTimeTutorial();
+    });
+  }
+
+  Future<void> _checkFirstTimeTutorial() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final hasSeen = prefs.getBool('has_seen_home_tutorial_v1') ?? false;
+      if (!hasSeen && mounted) {
+        // Beri sedikit delay agar widget selesai render sempurna
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) {
+          showTutorial();
+        }
+      }
+    } catch (e) {
+      print('Error checking tutorial: $e');
+    }
+  }
+
+  void showTutorial() {
+    AppTutorialOverlay.show(
+      context: context,
+      steps: [
+        TutorialStep(
+          targetKey: _keyProfileCard,
+          title: 'Profil & ID Pelanggan',
+          description:
+              'Kartu ini menampilkan nama dan ID pelanggan Anda. Ketuk untuk menyalin ID secara instan saat konfirmasi pembayaran atau lapor gangguan.',
+          icon: Icons.person_rounded,
+          borderRadius: 20,
+        ),
+        TutorialStep(
+          targetKey: _keyBillingCard,
+          title: 'Status & Jatuh Tempo Tagihan',
+          description:
+              'Pantau status pembayaran langganan Anda secara real-time. Anda bisa melihat status aktif, tanggal jatuh tempo, dan nominal tagihan berjalan.',
+          icon: Icons.receipt_long_rounded,
+          borderRadius: 18,
+        ),
+        TutorialStep(
+          targetKey: _keySpeedCard,
+          title: 'Kecepatan Internet Fiber',
+          description:
+              'Menampilkan paket kecepatan internet aktif Anda tanpa batasan kuota (unlimited). Layanan siap digunakan 24/7.',
+          icon: Icons.speed_rounded,
+          borderRadius: 18,
+        ),
+        TutorialStep(
+          targetKey: _keyQuickActions,
+          title: 'Menu Layanan & Pembayaran',
+          description:
+              'Akses cepat untuk bayar tagihan via Xendit (VA / QRIS), membaca panduan cara bayar, atau menghubungi Customer Care WhatsApp.',
+          icon: Icons.flash_on_rounded,
+          borderRadius: 16,
+        ),
+      ],
+      onFinish: () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('has_seen_home_tutorial_v1', true);
+      },
+    );
+  }
 
   String _formatCurrency(int amount) {
     return NumberFormat.currency(
@@ -29,7 +110,24 @@ class HomeTab extends StatelessWidget {
   void _copyToClipboard(BuildContext context, String text) {
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('ID Pelanggan disalin ke clipboard')),
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'ID Pelanggan $text berhasil disalin',
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF0F172A),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 2),
+      ),
     );
   }
 
@@ -56,47 +154,205 @@ class HomeTab extends StatelessWidget {
     }
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       children: [
-        // Greeting & ID Card
+        // ==========================================
+        // 1. GREETING & ID CARD (PEMANIS + MODERN UI)
+        // ==========================================
         Container(
-          padding: const EdgeInsets.all(16),
+          key: _keyProfileCard,
           decoration: BoxDecoration(
-            color: primaryColor,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                primaryColor,
+                Color.lerp(primaryColor, const Color(0xFF0F172A), 0.35) ??
+                    const Color(0xFF1E3A8A),
+              ],
+            ),
             boxShadow: [
               BoxShadow(
-                color: primaryColor.withOpacity(0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+                color: primaryColor.withValues(alpha: 0.28),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Stack(
             children: [
-              Text(
-                'Hi, ${customer.nama}',
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              // Ornamen dekorasi latar belakang (Pemanis)
+              Positioned(
+                right: -24,
+                top: -24,
+                child: Container(
+                  width: 110,
+                  height: 110,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.06),
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              InkWell(
-                onTap: () => _copyToClipboard(context, provider.customerId),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+              Positioned(
+                right: 30,
+                bottom: -35,
+                child: Container(
+                  width: 90,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.04),
+                  ),
+                ),
+              ),
+
+              // Isi Konten Kartu
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.copy, size: 14, color: Colors.white70),
-                    const SizedBox(width: 6),
-                    Text(
-                      provider.customerId,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.white70,
-                        fontWeight: FontWeight.w500,
+                    // Baris Atas: Greeting & Status Koneksi
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Selamat Datang,',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                customer.nama,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: -0.3,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Status Pill (Pemanis)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Color(0xFF4ADE80), // Vibrant Green
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                'Aktif',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Baris Bawah: Customer ID Pill (dengan Salin Button)
+                    InkWell(
+                      onTap: () => _copyToClipboard(context, provider.customerId),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.15),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.badge_outlined,
+                              size: 14,
+                              color: Colors.white70,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              provider.customerId,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(
+                                    Icons.copy_rounded,
+                                    size: 11,
+                                    color: Colors.white,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Salin',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -105,85 +361,149 @@ class HomeTab extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 20),
 
-        // Status Row (Billing Card & Speed Card)
+        const SizedBox(height: 16),
+
+        // ========================================================
+        // 2. STATUS ROW (BILLING STATUS & SPEED CARD) - PEMANIS
+        // ========================================================
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Billing Status Card
+            // KARTU STATUS TAGIHAN
             Expanded(
               child: Container(
+                key: _keyBillingCard,
                 padding: const EdgeInsets.all(16),
-                height: 170,
+                height: 175,
                 decoration: BoxDecoration(
-                  color: provider.isActive
-                      ? const Color(0xFFEFF6FF)
-                      : const Color(0xFFFEF2F2),
-                  borderRadius: BorderRadius.circular(16),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
                   border: Border.all(
                     color: provider.isActive
-                        ? const Color(0xFFDBEAFE)
-                        : const Color(0xFFFEE2E2),
+                        ? const Color(0xFFE2E8F0)
+                        : const Color(0xFFFECACA),
+                    width: 1.2,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      provider.isActive ? 'Tagihan Lunas' : 'Tunggakan',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: provider.isActive
-                            ? const Color(0xFF1E40AF)
-                            : const Color(0xFF991B1B),
-                      ),
+                    // Header Baris: Judul & Icon Badge
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          provider.isActive ? 'Tagihan' : 'Tunggakan',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: provider.isActive
+                                ? const Color(0xFFEFF6FF)
+                                : const Color(0xFFFEF2F2),
+                          ),
+                          child: Icon(
+                            provider.isActive
+                                ? Icons.verified_user_rounded
+                                : Icons.warning_amber_rounded,
+                            size: 15,
+                            color: provider.isActive
+                                ? const Color(0xFF2563EB)
+                                : const Color(0xFFDC2626),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
+
+                    // Status Pill
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
-                        vertical: 4,
+                        vertical: 3,
                       ),
                       decoration: BoxDecoration(
                         color: provider.isActive
-                            ? Colors.green.shade600
-                            : Colors.red.shade600,
-                        borderRadius: BorderRadius.circular(4),
+                            ? const Color(0xFFDCFCE7)
+                            : const Color(0xFFFEE2E2),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        provider.isActive ? 'Aktif' : 'Jatuh Tempo',
-                        style: const TextStyle(
+                        provider.isActive ? 'Lunas' : 'Jatuh Tempo',
+                        style: TextStyle(
                           fontSize: 10,
-                          color: Colors.white,
+                          color: provider.isActive
+                              ? const Color(0xFF15803D)
+                              : const Color(0xFFB91C1C),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
+
                     const Spacer(),
+
+                    // Detail Tagihan
                     if (nextInvoice != null) ...[
                       Text(
-                        _formatDate(nextInvoice.tglJatuhTempo),
+                        _formatCurrency(nextInvoice.totalHarga),
                         style: const TextStyle(
-                          fontSize: 15,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Tagihan: ${_formatCurrency(nextInvoice.totalHarga)}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.black54,
-                        ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_rounded,
+                            size: 11,
+                            color: Colors.grey.shade500,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              _formatDate(nextInvoice.tglJatuhTempo),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade600,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ] else ...[
                       const Text(
                         'Tidak ada tagihan',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 13,
                           fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Layanan aktif lancar',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade500,
                         ),
                       ),
                     ],
@@ -191,31 +511,68 @@ class HomeTab extends StatelessWidget {
                 ),
               ),
             ),
+
             const SizedBox(width: 12),
 
-            // Speed Card
+            // KARTU KECEPATAN (BRAND AJN-03 DIHILANGKAN, DIBUAT MODERN)
             Expanded(
               child: Container(
+                key: _keySpeedCard,
                 padding: const EdgeInsets.all(16),
-                height: 170,
+                height: 175,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: const Color(0xFFE2E8F0),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      customer.hargaLayanan?.brand ??
-                          (provider.isJelantik ? 'Jelantik' : 'Jakinet'),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
+                    // Header: Nama Layanan & Speed Icon
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            customer.hargaLayanan?.brand ??
+                                (provider.isJelantik ? 'Jelantik' : 'Jakinet'),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade700,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color(0xFFF1F5F9),
+                          ),
+                          child: Icon(
+                            Icons.speed_rounded,
+                            size: 15,
+                            color: primaryColor,
+                          ),
+                        ),
+                      ],
                     ),
+
                     const Spacer(),
+
+                    // Kecepatan Mbps
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.baseline,
                       textBaseline: TextBaseline.alphabetic,
@@ -223,28 +580,58 @@ class HomeTab extends StatelessWidget {
                         Text(
                           provider.speed,
                           style: TextStyle(
-                            fontSize: 36,
+                            fontSize: 34,
                             fontWeight: FontWeight.bold,
                             color: primaryColor,
+                            letterSpacing: -1,
                           ),
                         ),
                         const SizedBox(width: 4),
-                        const Text(
+                        Text(
                           'Mbps',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
-                            color: Colors.grey,
+                            color: Colors.grey.shade500,
                           ),
                         ),
                       ],
                     ),
+
                     const Spacer(),
-                    Text(
-                      'Brand: ${customer.idBrand.isNotEmpty ? customer.idBrand : 'N/A'}',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.black54,
+
+                    // Pengganti Brand: ajn-03 (Pemanis: Fiber Unlimited Badge)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: const Color(0xFFDCFCE7),
+                          width: 1,
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.bolt_rounded,
+                            size: 12,
+                            color: Color(0xFF16A34A),
+                          ),
+                          SizedBox(width: 3),
+                          Text(
+                            'Fiber Unlimited',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF15803D),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -253,173 +640,228 @@ class HomeTab extends StatelessWidget {
             ),
           ],
         ),
+
         const SizedBox(height: 16),
 
-        // Internet Info Bar
+        // ==========================================
+        // 3. INTERNET INFO BAR (MODERN STATUS)
+        // ==========================================
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
           child: Row(
             children: [
-              Icon(Icons.language, color: primaryColor, size: 28),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Internet',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      'Broadband UpTo',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFF22C55E),
                 ),
               ),
+              const SizedBox(width: 8),
               Text(
-                '${provider.speed} Mbps',
-                style: const TextStyle(
+                'Status Jaringan: ',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+              const Text(
+                'Normal & Terhubung',
+                style: TextStyle(
+                  fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const Spacer(),
+              Icon(
+                Icons.wifi_tethering_rounded,
+                size: 16,
+                color: Colors.grey.shade400,
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // ========================================================
+        // 4. TOMBOL AKSI CEPAT (PEMBAYARAN, CARA BAYAR, CS SUPPORT)
+        // ========================================================
+        Container(
+          key: _keyQuickActions,
+          child: Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: nextInvoice?.paymentLink != null
+                      ? () => _openUrl(nextInvoice!.paymentLink!)
+                      : null,
+                  icon: const Icon(
+                    Icons.account_balance_wallet_rounded,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                  label: const Text(
+                    'Pembayaran',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    disabledBackgroundColor: Colors.grey.shade300,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 4,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _showPaymentGuideModal(
+                    context,
+                    primaryColor,
+                    provider.brandWhatsapp,
+                  ),
+                  icon: Icon(
+                    Icons.menu_book_rounded,
+                    color: primaryColor,
+                    size: 16,
+                  ),
+                  label: Text(
+                    'Cara Bayar',
+                    style: TextStyle(
+                      color: primaryColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: Colors.grey.shade300),
+                    backgroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 4,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _openUrl(provider.brandWhatsapp),
+                  icon: Icon(
+                    Icons.support_agent_rounded,
+                    color: primaryColor,
+                    size: 16,
+                  ),
+                  label: Text(
+                    'CS WhatsApp',
+                    style: TextStyle(
+                      color: primaryColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: Colors.grey.shade300),
+                    backgroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 4,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 20),
 
-        // Quick Actions
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: nextInvoice?.paymentLink != null
-                    ? () => _openUrl(nextInvoice!.paymentLink!)
-                    : null,
-                icon: const Icon(Icons.payment, color: Colors.white, size: 16),
-                label: const Text(
-                  'Pembayaran',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  disabledBackgroundColor: Colors.grey.shade300,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 4,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _showPaymentGuideModal(
-                  context,
-                  primaryColor,
-                  provider.brandWhatsapp,
-                ),
-                icon: Icon(
-                  Icons.menu_book_rounded,
-                  color: primaryColor,
-                  size: 16,
-                ),
-                label: Text(
-                  'Cara Bayar',
-                  style: TextStyle(
-                    color: primaryColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: primaryColor),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 4,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _openUrl(provider.brandWhatsapp),
-                icon: Icon(Icons.support_agent, color: primaryColor, size: 16),
-                label: Text(
-                  'CS Support',
-                  style: TextStyle(
-                    color: primaryColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: primaryColor),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 4,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 24),
 
-        // Recent Payments Section
+        // ==========================================
+        // 5. RECENT PAYMENTS / RIWAYAT PEMBAYARAN
+        // ==========================================
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
               'Pembayaran Terakhir',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0F172A),
+              ),
             ),
-            TextButton(
-              onPressed: () {
-                // To display history tab, we would need control of Shell state,
-                // but we can just click BottomNavigationBar or simply notify
-              },
-              child: Text('Lihat semua', style: TextStyle(color: primaryColor)),
+            InkWell(
+              onTap: showTutorial,
+              borderRadius: BorderRadius.circular(6),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.help_outline_rounded,
+                      size: 14,
+                      color: primaryColor,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Tutorial',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
 
         if (invoices.isEmpty)
           Container(
-            padding: const EdgeInsets.all(32),
+            padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade100),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
-            child: const Column(
+            child: Column(
               children: [
-                Icon(Icons.receipt_long, size: 48, color: Colors.grey),
-                SizedBox(height: 8),
+                Icon(
+                  Icons.receipt_long_outlined,
+                  size: 40,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 8),
                 Text(
                   'Belum ada riwayat pembayaran',
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 13,
+                  ),
                 ),
               ],
             ),
@@ -427,130 +869,149 @@ class HomeTab extends StatelessWidget {
         else
           ...invoices.take(3).map((invoice) {
             final isPaid = invoice.statusInvoice == 'Lunas';
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              color: Colors.white,
-              surfaceTintColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: Colors.grey.shade200),
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isPaid ? Colors.green : Colors.red,
-                          ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isPaid
+                              ? const Color(0xFF22C55E)
+                              : const Color(0xFFEF4444),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            invoice.invoiceNumber,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                            overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          invoice.invoiceNumber,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: Color(0xFF0F172A),
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isPaid
+                              ? const Color(0xFFDCFCE7)
+                              : (invoice.statusInvoice.toLowerCase() ==
+                                          'kadaluarsa' ||
+                                      invoice.statusInvoice.toLowerCase() ==
+                                          'expired')
+                                  ? const Color(0xFFFEF3C7)
+                                  : const Color(0xFFFEE2E2),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          isPaid
+                              ? 'Lunas'
+                              : (invoice.statusInvoice.toLowerCase() ==
+                                          'kadaluarsa' ||
+                                      invoice.statusInvoice.toLowerCase() ==
+                                          'expired')
+                                  ? 'Terlambat'
+                                  : invoice.statusInvoice,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
                             color: isPaid
-                                ? Colors.green.shade50
+                                ? const Color(0xFF15803D)
                                 : (invoice.statusInvoice.toLowerCase() ==
-                                          'kadaluarsa' ||
-                                      invoice.statusInvoice.toLowerCase() ==
-                                          'expired')
-                                ? Colors.orange.shade50
-                                : Colors.red.shade50,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            isPaid
-                                ? 'Lunas'
-                                : (invoice.statusInvoice.toLowerCase() ==
-                                          'kadaluarsa' ||
-                                      invoice.statusInvoice.toLowerCase() ==
-                                          'expired')
-                                ? 'Terlambat'
-                                : invoice.statusInvoice,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: isPaid
-                                  ? Colors.green.shade700
-                                  : (invoice.statusInvoice.toLowerCase() ==
                                             'kadaluarsa' ||
                                         invoice.statusInvoice.toLowerCase() ==
                                             'expired')
-                                  ? Colors.orange.shade700
-                                  : Colors.red.shade700,
-                            ),
+                                    ? const Color(0xFFB45309)
+                                    : const Color(0xFFB91C1C),
                           ),
                         ),
-                      ],
-                    ),
-                    const Divider(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _formatCurrency(invoice.totalHarga),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                      ),
+                    ],
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    child: Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _formatCurrency(invoice.totalHarga),
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0F172A),
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Jatuh Tempo: ${_formatDate(invoice.tglJatuhTempo)}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (!isPaid && invoice.paymentLink != null) ...[
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: () => _openUrl(invoice.paymentLink!),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryColor,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              minimumSize: Size.zero,
                             ),
-                            child: const Text(
-                              'Bayar',
+                            const SizedBox(height: 2),
+                            Text(
+                              'Jatuh Tempo: ${_formatDate(invoice.tglJatuhTempo)}',
                               style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.white,
+                                fontSize: 11,
+                                color: Colors.grey.shade500,
                               ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (!isPaid && invoice.paymentLink != null) ...[
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: () => _openUrl(invoice.paymentLink!),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 7,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            minimumSize: Size.zero,
+                          ),
+                          child: const Text(
+                            'Bayar',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        ],
+                        ),
                       ],
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
             );
           }),
@@ -558,6 +1019,9 @@ class HomeTab extends StatelessWidget {
     );
   }
 
+  // ==========================================
+  // MODAL PETUNJUK CARA BAYAR XENDIT
+  // ==========================================
   void _showPaymentGuideModal(
     BuildContext context,
     Color primaryColor,
@@ -584,7 +1048,6 @@ class HomeTab extends StatelessWidget {
               20 + MediaQuery.of(context).padding.bottom,
             ),
             child: SafeArea(
-
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -650,41 +1113,16 @@ class HomeTab extends StatelessWidget {
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
-                      unselectedLabelStyle: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
                       tabs: const [
-                        Tab(
-                          height: 36,
-                          child: Center(
-                            child: Text('Bank VA', textAlign: TextAlign.center),
-                          ),
-                        ),
-                        Tab(
-                          height: 36,
-                          child: Center(
-                            child: Text(
-                              'QRIS & E-Wallet',
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                        Tab(
-                          height: 36,
-                          child: Center(
-                            child: Text(
-                              'Gerai Retail',
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
+                        Tab(text: 'Virtual Account'),
+                        Tab(text: 'QRIS & E-Wallet'),
+                        Tab(text: 'Gerai Retail'),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
 
-                  // Tab Contents
+                  // Tab Content
                   Expanded(
                     child: TabBarView(
                       children: [
@@ -708,7 +1146,7 @@ class HomeTab extends StatelessWidget {
                               num: '3',
                               title: 'Lakukan Transfer VA',
                               desc:
-                                  'Buka M-Banking / ATM Anda, pilih Transfer ➔ Virtual Account, tempelkan nomor VA & bayar sesuai nominal.',
+                                  'Buka M-Banking / ATM Anda, pilih Transfer > Virtual Account, tempelkan nomor VA & bayar sesuai nominal.',
                             ),
                             _GuideStepItem(
                               num: '4',
@@ -813,8 +1251,7 @@ class HomeTab extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-
+                  const SizedBox(height: 12),
                 ],
               ),
             ),

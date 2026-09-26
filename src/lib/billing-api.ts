@@ -3,6 +3,8 @@
  * Handles communication with the billing system API
  */
 
+import { minify } from "next/dist/build/swc/generated-native";
+
 const API_URL = process.env.BILLING_API_URL || 'https://jpo.jelantik.com/api/v1';
 const API_KEY = process.env.BILLING_API_KEY;
 
@@ -501,3 +503,35 @@ export async function verifyCustomer(identifier: string): Promise<CustomerData |
   }
 }
 
+/**
+ * Register FCM Token for customer push notifications
+ */
+export async function registerFCMToken(
+  pelangganId: number,
+  fcmToken: string,
+  deviceType: string = 'android'
+): Promise<any> {
+  try {
+    const response = await fetch(`${API_URL}/customer/fcm-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(API_KEY ? { 'X-API-Key': API_KEY } : {}),
+      },
+      body: JSON.stringify({
+        pelanggan_id: pelangganId,
+        fcm_token: fcmToken,
+        device_type: deviceType,
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn(`Backend FCM token registration warning: ${response.statusText}`);
+    }
+
+    return { pelanggan_id: pelangganId, fcm_token: fcmToken, status: 'saved' };
+  } catch (err) {
+    console.error('Error registering FCM token to billing API:', err);
+    return { pelanggan_id: pelangganId, fcm_token: fcmToken, status: 'cached' };
+  }
+}

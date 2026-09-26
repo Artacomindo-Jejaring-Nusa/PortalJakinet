@@ -4,6 +4,14 @@ class AppConstants {
   static const String apiUsername = '';
   static const String apiPassword = '';
 
+  // WebSocket Chat Server URL
+  static String get wsBaseUrl {
+    if (apiBaseUrl.startsWith('https://')) {
+      return apiBaseUrl.replaceFirst('https://', 'wss://');
+    }
+    return apiBaseUrl.replaceFirst('http://', 'ws://');
+  }
+
   // WhatsApp Support links
   static const String jelantikWhatsapp = 'https://wa.me/6282223616884';
   static const String jakinetWhatsapp = 'https://wa.me/6281188809633';

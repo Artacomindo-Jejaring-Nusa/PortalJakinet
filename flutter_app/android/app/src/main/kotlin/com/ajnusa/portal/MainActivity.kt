@@ -1,4 +1,4 @@
-package com.ajnusa.flutter_app
+package com.ajnusa.portal
 
 import io.flutter.embedding.android.FlutterActivity
 
