@@ -14,7 +14,7 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
   final GlobalKey<HomeTabState> _homeKey = GlobalKey<HomeTabState>();
 
@@ -23,6 +23,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabs = [
       HomeTab(key: _homeKey),
       const HistoryTab(),
@@ -35,11 +36,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
-  void _initChatIfPossible() {
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Saat aplikasi dibuka kembali dari background/keluar, otomatis sinkronkan ulang pesan & reconnect socket
+      _initChatIfPossible(forceRefresh: true);
+    }
+  }
+
+  void _initChatIfPossible({bool forceRefresh = false}) {
     final custProvider = context.read<CustomerProvider>();
     final chatProvider = context.read<ChatProvider>();
     if (custProvider.customerData != null) {
       final p = custProvider.customerData!.pelanggan;
+      if (forceRefresh) {
+        chatProvider.fetchHistory(silent: true);
+      }
       chatProvider.initChat(
         pelangganId: p.id,
         brand: custProvider.isJelantik ? 'Jelantik' : 'Jakinet',
