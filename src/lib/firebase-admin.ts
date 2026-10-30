@@ -1,25 +1,27 @@
-import admin from 'firebase-admin';
+import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
+import { getMessaging } from 'firebase-admin/messaging';
 import path from 'path';
 
-let firebaseApp: admin.app.App | null = null;
+let firebaseApp: App | null = null;
 
-export function getFirebaseAdmin(): admin.app.App {
+export function getFirebaseAdmin(): App {
   if (firebaseApp) return firebaseApp;
 
-  if (admin.apps.length > 0) {
-    firebaseApp = admin.apps[0]!;
+  const apps = getApps();
+  if (apps.length > 0) {
+    firebaseApp = apps[0]!;
     return firebaseApp;
   }
 
   try {
     const keyPath = path.resolve(process.cwd(), 'portal-ajnusa-firebase-adminsdk-fbsvc-07b0313b9c.json');
-    firebaseApp = admin.initializeApp({
-      credential: admin.credential.cert(keyPath),
+    firebaseApp = initializeApp({
+      credential: cert(keyPath),
     });
     console.log('[FirebaseAdmin] Initialized successfully with service account cert.');
   } catch (err: any) {
     console.warn('[FirebaseAdmin] Failed with cert file, trying default application credentials:', err?.message);
-    firebaseApp = admin.initializeApp();
+    firebaseApp = initializeApp();
   }
 
   return firebaseApp;
@@ -36,7 +38,7 @@ export async function sendFCMToTokens(
   if (!tokens || tokens.length === 0) return { success: 0, failure: 0 };
 
   const app = getFirebaseAdmin();
-  const messaging = app.messaging();
+  const messaging = getMessaging(app);
 
   const response = await messaging.sendEachForMulticast({
     tokens,
