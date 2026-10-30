@@ -42,6 +42,9 @@ class ChatProvider extends ChangeNotifier {
   Timer? _typingThrottleTimer;
   bool _isSendingTyping = false;
 
+  // Callback to notify UI to auto-scroll when a new message is added or history finishes loading
+  void Function({bool isHistoryLoaded})? onMessageAppended;
+
   List<ChatMessage> get messages => _messages;
   bool get isLoadingHistory => _isLoadingHistory;
   bool get isUploadingImage => _isUploadingImage;
@@ -198,6 +201,7 @@ class ChatProvider extends ChangeNotifier {
       if (existingIndex == -1) {
         _messages.add(newMsg);
         notifyListeners();
+        onMessageAppended?.call(isHistoryLoaded: false);
 
         if (_isChatTabActive && !newMsg.isMe && _roomId != null) {
           markAsRead();
@@ -318,6 +322,7 @@ class ChatProvider extends ChangeNotifier {
             _isConnectedToAgent = _messages.any((m) => m.senderType == 'admin');
 
             notifyListeners();
+            onMessageAppended?.call(isHistoryLoaded: true);
 
             if (_isChatTabActive && _hasUnreadMessages()) {
               markAsRead();
@@ -356,6 +361,7 @@ class ChatProvider extends ChangeNotifier {
 
     _messages.add(localMsg);
     notifyListeners();
+    onMessageAppended?.call(isHistoryLoaded: false);
 
     _socketService.sendMessage(cleanText, tempId, type: type, attachmentUrl: attachmentUrl);
   }

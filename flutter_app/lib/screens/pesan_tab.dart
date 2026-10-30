@@ -15,13 +15,16 @@ class PesanTab extends StatefulWidget {
   State<PesanTab> createState() => _PesanTabState();
 }
 
-class _PesanTabState extends State<PesanTab> {
+class _PesanTabState extends State<PesanTab> with AutomaticKeepAliveClientMixin {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _imagePicker = ImagePicker();
   bool _hasText = false;
   bool _showScrollToBottom = false;
   bool _showFaqSubmenu = false;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -73,6 +76,22 @@ class _PesanTabState extends State<PesanTab> {
     final custProvider = context.read<CustomerProvider>();
     final chatProvider = context.read<ChatProvider>();
 
+    // Daftarkan listener auto-scroll saat ada pesan baru atau riwayat selesai dimuat
+    chatProvider.onMessageAppended = ({bool isHistoryLoaded = false}) {
+      if (!mounted) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_scrollController.hasClients) return;
+        final maxScroll = _scrollController.position.maxScrollExtent;
+        final currentScroll = _scrollController.offset;
+        final isNearBottom = (maxScroll - currentScroll) < 250;
+
+        // Jika riwayat baru dimuat ATAU user berada di dekat bagian bawah, otomatis scroll ke bawah
+        if (isHistoryLoaded || isNearBottom) {
+          _scrollToBottom(animate: !isHistoryLoaded);
+        }
+      });
+    };
+
     if (custProvider.customerData != null) {
       final p = custProvider.customerData!.pelanggan;
       chatProvider.initChat(
@@ -86,6 +105,10 @@ class _PesanTabState extends State<PesanTab> {
 
   @override
   void dispose() {
+    // Lepas listener callback provider agar tidak memory leak
+    try {
+      context.read<ChatProvider>().onMessageAppended = null;
+    } catch (_) {}
     _textController.removeListener(_onTextChanged);
     _scrollController.removeListener(_onScroll);
     _textController.dispose();
@@ -93,13 +116,17 @@ class _PesanTabState extends State<PesanTab> {
     super.dispose();
   }
 
-  void _scrollToBottom() {
-    if (_scrollController.hasClients) {
+  void _scrollToBottom({bool animate = true}) {
+    if (!_scrollController.hasClients) return;
+    final target = _scrollController.position.maxScrollExtent + 100;
+    if (animate) {
       _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent + 80,
+        target,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
+    } else {
+      _scrollController.jumpTo(target);
     }
   }
 
@@ -471,6 +498,7 @@ class _PesanTabState extends State<PesanTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final custProvider = context.watch<CustomerProvider>();
     final chatProvider = context.watch<ChatProvider>();
     final primaryColor = Theme.of(context).primaryColor;
@@ -740,7 +768,7 @@ class _PesanTabState extends State<PesanTab> {
           ),
           const SizedBox(height: 10),
           _buildQuickMenuCard(
-            title: '1. 📋 Bantuan Cepat / FAQ Template',
+            title: '1. ðŸ“‹ Bantuan Cepat / FAQ Template',
             subtitle: 'Solusi instan kendala WiFi lambat, lampu LOS, tagihan & restart modem',
             color: const Color(0xFF2563EB),
             icon: Icons.help_center_outlined,
@@ -751,7 +779,7 @@ class _PesanTabState extends State<PesanTab> {
             },
           ),
           _buildQuickMenuCard(
-            title: '2. 👤 Hubungkan ke Customer Support (CS)',
+            title: '2. ðŸ‘¤ Hubungkan ke Customer Support (CS)',
             subtitle: 'Tersambung langsung dengan tim representatif agen CS kami',
             color: const Color(0xFF059669),
             icon: Icons.support_agent_rounded,
@@ -770,9 +798,9 @@ class _PesanTabState extends State<PesanTab> {
             ),
           ),
           const SizedBox(height: 6),
-          _buildQuickAction('1.1 📶 Kendala WiFi Lambat / Sinyal Lemah'),
-          _buildQuickAction('1.2 🔴 Lampu Indikator LOS Menyala Merah'),
-          _buildQuickAction('1.3 💳 Info Tagihan & Cara Pembayaran'),
+          _buildQuickAction('1.1 ðŸ“¶ Kendala WiFi Lambat / Sinyal Lemah'),
+          _buildQuickAction('1.2 ðŸ”´ Lampu Indikator LOS Menyala Merah'),
+          _buildQuickAction('1.3 ðŸ’³ Info Tagihan & Cara Pembayaran'),
         ],
       ),
     );

@@ -162,12 +162,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: SafeArea(
-        child: _currentIndex == 2
-            ? _tabs[_currentIndex]
-            : RefreshIndicator(
-                onRefresh: provider.refresh,
-                child: _tabs[_currentIndex],
-              ),
+        child: IndexedStack(
+          index: _currentIndex,
+          children: [
+            RefreshIndicator(
+              onRefresh: provider.refresh,
+              child: _tabs[0],
+            ),
+            RefreshIndicator(
+              onRefresh: provider.refresh,
+              child: _tabs[1],
+            ),
+            _tabs[2], // PesanTab: state chat, input, scroll selalu terjaga
+            RefreshIndicator(
+              onRefresh: provider.refresh,
+              child: _tabs[3],
+            ),
+          ],
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
