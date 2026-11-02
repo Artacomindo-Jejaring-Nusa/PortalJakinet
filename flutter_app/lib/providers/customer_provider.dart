@@ -62,8 +62,11 @@ class CustomerProvider with ChangeNotifier {
     final email = _customerData!.pelanggan.email;
     final identifier = phone.isNotEmpty ? phone : email;
 
-    if (identifier.isNotEmpty) {
-      await FCMService().sendTokenToBackend(identifier: identifier);
+    if (identifier.isNotEmpty || _customerData!.pelanggan.id > 0) {
+      await FCMService().sendTokenToBackend(
+        identifier: identifier,
+        pelangganId: _customerData!.pelanggan.id,
+      );
     }
   }
 

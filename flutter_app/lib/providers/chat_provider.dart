@@ -313,12 +313,24 @@ class ChatProvider extends ChangeNotifier {
                 .map((item) => ChatMessage.fromJson(item))
                 .toList();
 
-            final pendingMessages = _messages.where((m) => m.isPending).toList();
+            // Pertahankan pesan lokal yang belum ada di loaded (misal pesan realtime yang baru tiba via socket atau pending)
+            final int highestLoadedId = loaded.isNotEmpty
+                ? loaded.map((m) => m.id ?? 0).reduce((a, b) => a > b ? a : b)
+                : 0;
+
+            final extraLocalMessages = _messages.where((m) {
+              if (m.isPending) return true;
+              if (m.id != null && m.id! > highestLoadedId) return true;
+              return false;
+            }).toList();
+
             _messages = loaded;
-            for (final pending in pendingMessages) {
-              final exists = _messages.any((m) => m.tempId == pending.tempId);
+            for (final extra in extraLocalMessages) {
+              final exists = _messages.any((m) =>
+                  (extra.id != null && m.id == extra.id) ||
+                  (extra.tempId != null && extra.tempId!.isNotEmpty && m.tempId == extra.tempId));
               if (!exists) {
-                _messages.add(pending);
+                _messages.add(extra);
               }
             }
 

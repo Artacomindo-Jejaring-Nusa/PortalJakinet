@@ -23,6 +23,8 @@ class FCMService {
   bool _initialized = false;
   String? _fcmToken;
   String? get fcmToken => _fcmToken;
+  String? _lastIdentifier;
+  int? _lastPelangganId;
 
   // Callback to trigger automatic UI data refresh on notification
   void Function()? onMessageReceived;
@@ -106,6 +108,13 @@ class FCMService {
       _messaging.onTokenRefresh.listen((newToken) {
         _fcmToken = newToken;
         print('FCM Token Refreshed: $newToken');
+        if ((_lastIdentifier != null && _lastIdentifier!.isNotEmpty) || (_lastPelangganId != null && _lastPelangganId! > 0)) {
+          sendTokenToBackend(
+            identifier: _lastIdentifier ?? '',
+            pelangganId: _lastPelangganId,
+            token: newToken,
+          );
+        }
       });
 
       // 6. Listen for Foreground Messages
@@ -197,29 +206,35 @@ class FCMService {
   // Register Token to Backend Server
   Future<bool> sendTokenToBackend({
     required String identifier, // Phone or Email or Customer ID
+    int? pelangganId,
     String? token,
   }) async {
+    if (identifier.isNotEmpty) _lastIdentifier = identifier;
+    if (pelangganId != null && pelangganId > 0) _lastPelangganId = pelangganId;
+
     final tokenToSend = token ?? _fcmToken ?? await _messaging.getToken();
     if (tokenToSend == null || tokenToSend.isEmpty) return false;
 
-    // Multiple potential endpoints (Next.js route & billing API)
+    // Prioritas utama: Golang Billing Backend endpoint
     final candidateEndpoints = [
-      'https://jpo.jelantik.com/api/customer/fcm-token',
-      'http://10.0.2.2:3000/api/customer/fcm-token',
       '${AppConstants.apiBaseUrl}/customer/fcm-token',
+      'https://jpo.jelantik.com/api/v1/customer/fcm-token',
     ];
 
     for (var endpoint in candidateEndpoints) {
       try {
         final url = Uri.parse(endpoint);
+        final payload = <String, dynamic>{
+          if (pelangganId != null && pelangganId > 0) 'pelanggan_id': pelangganId,
+          'identifier': identifier,
+          'fcm_token': tokenToSend,
+          'device_type': 'android',
+        };
+
         final response = await http.post(
           url,
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'identifier': identifier,
-            'fcm_token': tokenToSend,
-            'device_type': 'android',
-          }),
+          body: jsonEncode(payload),
         ).timeout(const Duration(seconds: 5));
 
         if (response.statusCode == 200 || response.statusCode == 201) {

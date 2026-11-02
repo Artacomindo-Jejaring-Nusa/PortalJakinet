@@ -81,14 +81,7 @@ class _PesanTabState extends State<PesanTab> with AutomaticKeepAliveClientMixin 
       if (!mounted) return;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!_scrollController.hasClients) return;
-        final maxScroll = _scrollController.position.maxScrollExtent;
-        final currentScroll = _scrollController.offset;
-        final isNearBottom = (maxScroll - currentScroll) < 250;
-
-        // Jika riwayat baru dimuat ATAU user berada di dekat bagian bawah, otomatis scroll ke bawah
-        if (isHistoryLoaded || isNearBottom) {
-          _scrollToBottom(animate: !isHistoryLoaded);
-        }
+        _scrollToBottom(animate: !isHistoryLoaded);
       });
     };
 
@@ -101,6 +94,16 @@ class _PesanTabState extends State<PesanTab> with AutomaticKeepAliveClientMixin 
       );
     }
     chatProvider.setChatTabActive(true);
+
+    // Otomatis gulir ke pesan paling bawah saat tab pertama kali dibuka jika sudah ada pesan
+    if (chatProvider.messages.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom(animate: false);
+      });
+      Future.delayed(const Duration(milliseconds: 150), () {
+        if (mounted) _scrollToBottom(animate: false);
+      });
+    }
   }
 
   @override
