@@ -58,7 +58,7 @@ class ChatProvider extends ChangeNotifier {
   static const List<ChatFaqItem> faqList = [
     ChatFaqItem(
       id: '1.1',
-      title: '1.1 ðŸ“¡ Kendala WiFi Lambat / Sinyal Lemah',
+      title: '1.1 📡 Kendala WiFi Lambat / Sinyal Lemah',
       shortTitle: 'WiFi Lambat',
       answer: 'Berikut langkah cepat mengatasi koneksi lambat:\n\n'
           '1. Matikan modem ONT dengan mencabut adaptor listrik selama 10-30 detik lalu colokkan kembali.\n'
@@ -68,36 +68,36 @@ class ChatProvider extends ChangeNotifier {
     ),
     ChatFaqItem(
       id: '1.2',
-      title: '1.2 ðŸ”´ Lampu Indikator LOS Menyala Merah',
+      title: '1.2 🔴 Lampu Indikator LOS Menyala Merah',
       shortTitle: 'Lampu LOS Merah',
       answer: 'Lampu indikator LOS merah menandakan kabel fiber optik tidak menerima sinyal cahaya dari ODP:\n\n'
-          'â€¢ Periksa kabel optik (kabel kuning/hitam kecil) di belakang modem, pastikan konektor tertancap rapat dan kabel tidak tertekuk tajam/terjepit.\n'
-          'â€¢ Jika kabel dalam kondisi baik namun lampu tetap merah, kemungkinan ada gangguan kabel luar atau pemeliharaan jaringan.\n'
-          'â€¢ Silakan tekan "Hubungkan ke CS" untuk dijadwalkan pengecekan oleh Teknisi.',
+          '• Periksa kabel optik (kabel kuning/hitam kecil) di belakang modem, pastikan konektor tertancap rapat dan kabel tidak tertekuk tajam/terjepit.\n'
+          '• Jika kabel dalam kondisi baik namun lampu tetap merah, kemungkinan ada gangguan kabel luar atau pemeliharaan jaringan.\n'
+          '• Silakan tekan "Hubungkan ke CS" untuk dijadwalkan pengecekan oleh Teknisi.',
     ),
     ChatFaqItem(
       id: '1.3',
-      title: '1.3 ðŸ’³ Info Tagihan & Cara Pembayaran',
+      title: '1.3 💳 Info Tagihan & Cara Pembayaran',
       shortTitle: 'Info Tagihan & Bayar',
       answer: 'Untuk rincian tagihan internet Anda:\n\n'
-          'â€¢ Buka menu "Home" atau "History" di aplikasi ini untuk melihat invoice aktif.\n'
-          'â€¢ Pembayaran dapat dilakukan via Virtual Account (BCA, Mandiri, BRI, BNI) atau scan QRIS.\n'
-          'â€¢ Setelah pembayaran berhasil, status langganan akan otomatis tersinkronisasi dalam 1-5 menit.',
+          '• Buka menu "Home" atau "History" di aplikasi ini untuk melihat invoice aktif.\n'
+          '• Pembayaran dapat dilakukan via Virtual Account (BCA, Mandiri, BRI, BNI) atau scan QRIS.\n'
+          '• Setelah pembayaran berhasil, status langganan akan otomatis tersinkronisasi dalam 1-5 menit.',
     ),
     ChatFaqItem(
       id: '1.4',
-      title: '1.4 ðŸ”„ Panduan Restart / Reset Modem yang Aman',
+      title: '1.4 🔄 Panduan Restart / Reset Modem yang Aman',
       shortTitle: 'Restart / Reset Modem',
-      answer: 'âš ï¸ PERHATIAN PENTING:\n\n'
-          'â€¢ Cukup cabut adaptor power listrik modem selama 30 detik lalu pasang kembali.\n'
-          'â€¢ HINDARI menusuk lubang kecil berlabel "RESET" di belakang modem! Menusuk tombol reset akan menghapus username & password internet (PPPoE) sehingga modem tidak bisa terhubung ke server dan harus disetting ulang oleh teknisi.',
+      answer: '⚠️ PERHATIAN PENTING:\n\n'
+          '• Cukup cabut adaptor power listrik modem selama 30 detik lalu pasang kembali.\n'
+          '• HINDARI menusuk lubang kecil berlabel "RESET" di belakang modem! Menusuk tombol reset akan menghapus username & password internet (PPPoE) sehingga modem tidak bisa terhubung ke server dan harus disetting ulang oleh teknisi.',
     ),
     ChatFaqItem(
       id: '1.5',
-      title: '1.5 â±ï¸ Jam Operasional CS & Kunjungan Teknisi',
+      title: '1.5 ⏱️ Jam Operasional CS & Kunjungan Teknisi',
       shortTitle: 'Jam Operasional',
-      answer: 'â€¢ Layanan Customer Support (Chat & WhatsApp) beroperasi setiap hari: 08:00 - 22:00 WIB.\n'
-          'â€¢ Layanan Kunjungan Teknisi Lapangan (perbaikan fisik & pemasangan baru): Senin - Minggu pukul 08:30 - 17:00 WIB.',
+      answer: '• Layanan Customer Support (Chat & WhatsApp) beroperasi setiap hari: 08:00 - 22:00 WIB.\n'
+          '• Layanan Kunjungan Teknisi Lapangan (perbaikan fisik & pemasangan baru): Senin - Minggu pukul 08:30 - 17:00 WIB.',
     ),
   ];
 
@@ -394,8 +394,8 @@ class ChatProvider extends ChangeNotifier {
         senderType: 'system',
         senderName: 'Virtual Assistant',
         message: '${faq.answer}\n\n'
-            'â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n'
-            'ðŸ’¡ Apakah panduan ini membantu?\n'
+            '----------------------------------------\n'
+            '💡 Apakah panduan ini membantu?\n'
             'Jika masih mengalami kendala, Anda dapat menekan opsi "2. Hubungkan ke CS" di bawah.',
         messageType: 'text',
         status: 'delivered',
@@ -421,7 +421,7 @@ class ChatProvider extends ChangeNotifier {
         roomId: _roomId ?? 0,
         senderType: 'system',
         senderName: 'Virtual Assistant',
-        message: 'Permintaan Anda telah diterima! ðŸ‘¨â€ðŸ’¼\n\n'
+        message: 'Permintaan Anda telah diterima! 👨‍💼\n\n'
             'Anda sedang dihubungkan dengan Customer Support yang bertugas. '
             'Mohon tunggu sebentar, pesan Anda akan segera ditanggapi oleh tim kami.',
         messageType: 'text',
@@ -472,11 +472,11 @@ class ChatProvider extends ChangeNotifier {
         senderType: 'system',
         senderName: 'Virtual Assistant',
         message: 'Silakan pilih topik bantuan yang Anda butuhkan:\n\n'
-            '1.1 ðŸ“¡ WiFi Lambat / Putus-Putus\n'
-            '1.2 ðŸ”´ Lampu LOS Merah / Kabel Putus\n'
-            '1.3 ðŸ’³ Info Tagihan & Cara Bayar\n'
-            '1.4 ðŸ”„ Cara Restart Modem yang Aman\n'
-            '1.5 â±ï¸ Jam Operasional CS & Teknisi\n\n'
+            '1.1 📡 WiFi Lambat / Putus-Putus\n'
+            '1.2 🔴 Lampu LOS Merah / Kabel Putus\n'
+            '1.3 💳 Info Tagihan & Cara Bayar\n'
+            '1.4 🔄 Cara Restart Modem yang Aman\n'
+            '1.5 ⏱️ Jam Operasional CS & Teknisi\n\n'
             'Ketik angka opsi (misal 1.1) atau tekan tombol menu di bawah.',
         messageType: 'text',
         status: 'delivered',
