@@ -60,6 +60,29 @@ export default function PortalDashboardClient({ customerData }: Props) {
     }
   };
 
+  // Set of cycle keys (e.g. "2026-11") that are already paid
+  const paidCycleKeys = new Set(
+    (customerData?.invoices || [])
+      .filter((inv: any) => {
+        const s = (inv?.status_invoice || '').toLowerCase();
+        return s === 'lunas' || s.includes('lunas') || s.includes('paid');
+      })
+      .map((inv: any) => {
+        if (!inv?.tgl_jatuh_tempo) return '';
+        const d = new Date(inv.tgl_jatuh_tempo);
+        return isNaN(d.getTime()) ? '' : `${d.getFullYear()}-${d.getMonth() + 1}`;
+      })
+      .filter(Boolean)
+  );
+
+  const isCoveredByPaidInvoice = (inv: any) => {
+    if (!inv?.tgl_jatuh_tempo) return false;
+    const d = new Date(inv.tgl_jatuh_tempo);
+    if (isNaN(d.getTime())) return false;
+    const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
+    return paidCycleKeys.has(key);
+  };
+
   // Helper to identify active unpaid invoice ('Belum Bayar')
   const isUnpaidActiveInvoice = (inv: any) => {
     if (!inv) return false;
@@ -67,6 +90,8 @@ export default function PortalDashboardClient({ customerData }: Props) {
     const isPaid = status === 'lunas' || status.includes('lunas') || status.includes('paid');
     const isCancelled = status.includes('batal') || status.includes('cancel');
     const isExpired = status.includes('expired') || status.includes('kadaluarsa') || status.includes('kadaluwarsa');
+    // If another invoice for the same cycle is already paid, this unpaid invoice is a superseded duplicate
+    if (!isPaid && isCoveredByPaidInvoice(inv)) return false;
     return !isPaid && !isCancelled && !isExpired;
   };
 
@@ -106,7 +131,7 @@ export default function PortalDashboardClient({ customerData }: Props) {
     const isCancelled = status.includes('batal') || status.includes('cancel');
     const isExpired = status.includes('expired') || status.includes('kadaluarsa') || status.includes('kadaluwarsa');
 
-    if (!isPaid && !isExpired && !isCancelled) return 1;
+    if (!isPaid && !isExpired && !isCancelled && !isCoveredByPaidInvoice(inv)) return 1;
     if (isPaid) return 2;
     return 3;
   };
@@ -163,19 +188,20 @@ export default function PortalDashboardClient({ customerData }: Props) {
       };
     }
 
-    if (isExpiredInDb || isCancelled) {
+    if (isExpiredInDb || isCancelled || (!isPaid && isCoveredByPaidInvoice(invoice))) {
+      const isCovered = !isPaid && !isExpiredInDb && !isCancelled && isCoveredByPaidInvoice(invoice);
       return {
         type: 'expired',
-        label: isCancelled ? 'Dibatalkan' : 'Kadaluarsa',
-        badgeText: isCancelled ? 'Dibatalkan' : 'Kadaluarsa',
+        label: isCovered ? 'Sudah Dibayar' : isCancelled ? 'Dibatalkan' : 'Kadaluarsa',
+        badgeText: isCovered ? 'Tergantikan' : isCancelled ? 'Dibatalkan' : 'Kadaluarsa',
         badgeBg: '#fffbe6',
         badgeColor: '#b45309',
         badgeBorder: '#fef08a',
         dotClass: 'portal-invoice-status-dot--expired',
         textClass: 'portal-invoice-status-text--expired',
         iconClass: 'portal-invoice-icon--expired',
-        buttonText: 'Link Kadaluarsa',
-        buttonLink: brandWhatsapp,
+        buttonText: isCovered ? null : 'Link Kadaluarsa',
+        buttonLink: isCovered ? null : brandWhatsapp,
         buttonClass: 'portal-invoice-pay-btn--expired',
       };
     }
