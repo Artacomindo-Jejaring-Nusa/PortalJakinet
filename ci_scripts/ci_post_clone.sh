@@ -24,7 +24,6 @@ flutter --version
 
 # Determine workspace root
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-# SCRIPT_DIR is .../flutter_app/ios/ci_scripts -> repo root is 3 levels up
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 if [ -n "$CI_PRIMARY_REPOSITORY_PATH" ] && [ -d "$CI_PRIMARY_REPOSITORY_PATH" ]; then
@@ -39,7 +38,7 @@ echo "=== Resolving Flutter Dependencies ==="
 cd "$REPO_ROOT/flutter_app"
 flutter pub get
 
-# Fix trailing commas in pub-cache if needed for older Swift compilers
+# Fix trailing commas in pub-cache if needed for Swift compilers
 echo "=== Checking & Fixing Swift Trailing Commas in ~/.pub-cache ==="
 python3 -c "
 import os, re
@@ -61,8 +60,7 @@ if os.path.exists(cache_dir):
     print(f'Fixed trailing commas in {count} files')
 " || true
 
-echo "=== Installing iOS CocoaPods ==="
-cd "$REPO_ROOT/flutter_app/ios"
-pod install
+echo "=== Preparing iOS Build Configuration ==="
+flutter build ios --config-only --no-codesign || (cd ios && pod install)
 
 echo "=== ci_post_clone.sh completed successfully! ==="
