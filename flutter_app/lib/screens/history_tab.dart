@@ -123,13 +123,13 @@ class _HistoryTabState extends State<HistoryTab> {
                       final isPaid = invoice.statusInvoice == 'Lunas' || invoice.statusInvoice.toLowerCase().contains('lunas');
                       final currentActiveBill = provider.currentActiveBill;
                       final isCurrentActive = !isPaid && currentActiveBill != null && invoice.id == currentActiveBill.id;
-                      final isExpired = !isPaid && !isCurrentActive;
+                      final isExpired = invoice.isExpired() || (!isPaid && !isCurrentActive);
 
                       String badgeText = isPaid
                           ? 'Lunas'
                           : isCurrentActive
                               ? 'Tagihan Berjalan'
-                              : 'Kadaluarsa';
+                              : 'Expired';
                       Color badgeBg = isPaid
                           ? Colors.green.shade50
                           : isCurrentActive
@@ -237,7 +237,7 @@ class _HistoryTabState extends State<HistoryTab> {
                                         },
                                         tooltip: 'Download PDF',
                                       ),
-                                      if (!isPaid) ...[
+                                      if (!isPaid && !isExpired) ...[
                                         const SizedBox(width: 4),
                                         ElevatedButton(
                                           onPressed: () {
