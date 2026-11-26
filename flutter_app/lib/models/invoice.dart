@@ -65,12 +65,11 @@ class Invoice {
     final status = statusInvoice.toLowerCase();
     if (status == 'lunas' || status.contains('lunas') || status.contains('paid')) return false;
 
-    final link = paymentLink;
-    final hasPaymentLink = link != null && link.isNotEmpty && link != '#';
-
     if (status.contains('batal') || status.contains('cancel')) return true;
 
-    if ((status.contains('expired') || status.contains('kadaluarsa') || status.contains('kadaluwarsa')) && !hasPaymentLink) {
+    if (status.contains('expired') ||
+        status.contains('kadaluarsa') ||
+        status.contains('kadaluwarsa')) {
       return true;
     }
 

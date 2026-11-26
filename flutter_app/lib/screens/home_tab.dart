@@ -869,6 +869,7 @@ class HomeTabState extends State<HomeTab> {
         else
           ...invoices.take(3).map((invoice) {
             final isPaid = invoice.statusInvoice == 'Lunas';
+            final isExpired = invoice.isExpired();
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(16),
@@ -895,7 +896,9 @@ class HomeTabState extends State<HomeTab> {
                           shape: BoxShape.circle,
                           color: isPaid
                               ? const Color(0xFF22C55E)
-                              : const Color(0xFFEF4444),
+                              : isExpired
+                                  ? const Color(0xFF94A3B8)
+                                  : const Color(0xFFEF4444),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -919,33 +922,24 @@ class HomeTabState extends State<HomeTab> {
                         decoration: BoxDecoration(
                           color: isPaid
                               ? const Color(0xFFDCFCE7)
-                              : (invoice.statusInvoice.toLowerCase() ==
-                                          'kadaluarsa' ||
-                                      invoice.statusInvoice.toLowerCase() ==
-                                          'expired')
-                                  ? const Color(0xFFFEF3C7)
+                              : isExpired
+                                  ? const Color(0xFFF1F5F9)
                                   : const Color(0xFFFEE2E2),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           isPaid
                               ? 'Lunas'
-                              : (invoice.statusInvoice.toLowerCase() ==
-                                          'kadaluarsa' ||
-                                      invoice.statusInvoice.toLowerCase() ==
-                                          'expired')
-                                  ? 'Terlambat'
+                              : isExpired
+                                  ? 'Expired'
                                   : invoice.statusInvoice,
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                             color: isPaid
                                 ? const Color(0xFF15803D)
-                                : (invoice.statusInvoice.toLowerCase() ==
-                                            'kadaluarsa' ||
-                                        invoice.statusInvoice.toLowerCase() ==
-                                            'expired')
-                                    ? const Color(0xFFB45309)
+                                : isExpired
+                                    ? const Color(0xFF475569)
                                     : const Color(0xFFB91C1C),
                           ),
                         ),
@@ -983,7 +977,10 @@ class HomeTabState extends State<HomeTab> {
                           ],
                         ),
                       ),
-                      if (!isPaid && invoice.paymentLink != null) ...[
+                      if (!isPaid &&
+                          !isExpired &&
+                          invoice.paymentLink != null &&
+                          invoice.paymentLink!.isNotEmpty) ...[
                         const SizedBox(width: 8),
                         ElevatedButton(
                           onPressed: () => _openUrl(invoice.paymentLink!),
